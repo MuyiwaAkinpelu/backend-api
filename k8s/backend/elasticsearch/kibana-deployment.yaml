@@ -43,3 +43,36 @@ spec:
             limits:
               cpu: 200m # same as 0.2
               memory: 250Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana-config
+  labels:
+    component: kibana
+data:
+  elasticsearch_username: elastic
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kibana-secret
+  labels:
+    component: kibana
+type: Opaque
+data:
+  elasticsearch_password: UGswSUc0ZjZGM1BVNUxuMW9OZWc=
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  labels:
+    component: kibana
+spec:
+  type: NodePort
+  selector:
+    component: kibana
+  ports:
+    - port: 5601
+      targetPort: 5601

@@ -52,3 +52,54 @@ spec:
         - name: elasticsearch-data
           persistentVolumeClaim:
             claimName: elasticsearch-pvc
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-config
+  labels:
+    component: elasticsearch
+data:
+  elasticsearch.yml: |
+    cluster.name: Demo-Elastic
+    node.name: Master
+    path.data: /usr/share/elasticsearch/data
+    http:
+      host: 0.0.0.0
+      port: 9200
+    bootstrap.memory_lock: true
+    transport.host: 127.0.0.1
+    xpack.license.self_generated.type: basic
+    # Enable xpack.security which is provided in basic subscription
+    xpack.security.enabled: true
+    xpack.graph.enabled: false
+    xpack.watcher.enabled: false
+    xpack.ml.enabled: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-pvc
+  labels:
+    component: elasticsearch
+spec:
+  # storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1G
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  labels:
+    component: elasticsearch
+spec:
+  type: NodePort
+  selector:
+    component: elasticsearch
+  ports:
+    - port: 9200
+      targetPort: 9200
