@@ -36,8 +36,10 @@ import { FilesModule } from '@modules/files/files.module';
       useFactory: async (configService: ConfigService) => ({
         config: {
           password: configService.getOrThrow<string>(REDIS_PASS),
-          host: configService.getOrThrow<string>(REDIS_HOST),
-          port: +configService.get<number>(REDIS_PORT),
+          tls: {
+            host: configService.getOrThrow<string>(REDIS_HOST),
+            port: +configService.get<number>(REDIS_PORT),
+          },
         },
       }),
     }),
@@ -52,7 +54,7 @@ import { FilesModule } from '@modules/files/files.module';
     }),
     CaslModule.forRoot<Roles>({
       // Role to grant full access, optional
-      superuserRole: Roles.admin,
+      superuserRole: Roles.SYSTEM_ADMIN,
     }),
     HealthModule,
     UserModule,

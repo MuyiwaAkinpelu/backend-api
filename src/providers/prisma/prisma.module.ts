@@ -6,10 +6,25 @@ import {
 } from './interfaces';
 import { PRISMA_SERVICE_OPTIONS } from './prisma.constants';
 import { PrismaService } from './prisma.service';
+import { PrismaMiddleware } from './prisma.middleware';
+import { SearchModule } from '@modules/search/search.module';
+import { DocumentElasticIndex } from '@modules/search/search-index/document.elastic.index';
+import { SearchService } from '@modules/search/search.service';
+import { DocumentService } from '@modules/files/services/document.service';
 
 @Module({
-  providers: [PrismaService],
+  providers: [
+    PrismaService,
+    PrismaMiddleware,
+    {
+      provide: 'SearchServiceInterface',
+      useClass: SearchService,
+    },
+    DocumentService,
+    DocumentElasticIndex,
+  ],
   exports: [PrismaService],
+  imports: [SearchModule],
 })
 export class PrismaModule {
   static forRoot(options: PrismaModuleOptions = {}): DynamicModule {

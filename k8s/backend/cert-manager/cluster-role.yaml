@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cert-manager-controller-certificaterequests
+rules:
+  - apiGroups: ['']
+    resources: ['secrets']
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'delete']
+  - apiGroups: ['cert-manager.io']
+    resources: ['certificaterequests']
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'delete', 'patch']

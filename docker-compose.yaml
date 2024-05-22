@@ -1,0 +1,13 @@
+version: '3.7'
+
+services:
+  drs-api:
+    container_name: drs-api
+    image: registry.digitalocean.com/scidar/drs-api:latest
+    env_file:
+      - .env
+    volumes:
+      - /var/www/uploads:/var/www/uploads
+    ports:
+      - 8000:3000
+    restart: always

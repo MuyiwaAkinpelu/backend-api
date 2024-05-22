@@ -7,7 +7,7 @@ import { TokensEntity } from '@modules/auth/entities/tokens.entity';
 export type Subjects = InferSubjects<typeof TokensEntity>;
 
 export const permissions: Permissions<Roles, Subjects, Actions> = {
-  guest({ can }) {
+  GUEST({ can }) {
     can(Actions.delete, TokensEntity);
   },
 };

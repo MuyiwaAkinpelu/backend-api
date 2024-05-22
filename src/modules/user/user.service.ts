@@ -20,6 +20,17 @@ export class UserService {
   findOne(id: string): Promise<User> {
     return this.userRepository.findOne({
       where: { id },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        phone: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        isVerified: true,
+        roles: true,
+      },
     });
   }
 

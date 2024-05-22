@@ -9,6 +9,7 @@ import {
 import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaServiceOptions } from './interfaces';
 import { PRISMA_SERVICE_OPTIONS } from './prisma.constants';
+import { PrismaMiddleware } from './prisma.middleware';
 
 @Injectable()
 export class PrismaService
@@ -22,6 +23,7 @@ export class PrismaService
     @Optional()
     @Inject(PRISMA_SERVICE_OPTIONS)
     private readonly prismaServiceOptions: PrismaServiceOptions = {},
+    private readonly prismaMiddleware: PrismaMiddleware,
   ) {
     super(prismaServiceOptions.prismaOptions);
 
@@ -30,6 +32,10 @@ export class PrismaService
         this.$use(middleware),
       );
     }
+
+    // Use the default middlewares
+    this.$use(this.prismaMiddleware.createFileMiddleware());
+    this.$use(this.prismaMiddleware.updateFileMiddleware());
   }
 
   async onModuleInit() {

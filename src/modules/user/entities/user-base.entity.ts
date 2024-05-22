@@ -2,6 +2,7 @@ import { Exclude, Expose } from 'class-transformer';
 
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import UserEntity from '@modules/user/entities/user.entity';
+import { Roles } from '@modules/app/app.roles';
 
 @Exclude()
 export default class UserBaseEntity extends PartialType(UserEntity) {
@@ -32,4 +33,8 @@ export default class UserBaseEntity extends PartialType(UserEntity) {
   @ApiProperty({ type: Boolean })
   @Expose()
   declare readonly isVerified: boolean;
+
+  @ApiProperty({ type: Array })
+  @Expose()
+  declare readonly roles: Roles[];
 }

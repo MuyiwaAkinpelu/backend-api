@@ -77,6 +77,8 @@ sudo nano  /etc/hosts
 mongosh "mongodb://localhost:30000,localhost:30001,localhost:30002/?replicaSet=rs0"
 ```
 
+#### You can skip step 1-4 by running the docker-compose.dev.yaml file
+
 ## Migration
 
 1. Run migrations
@@ -208,8 +210,11 @@ Define roles for app:
 // app.roles.ts
 
 export enum Roles {
-  admin = 'admin',
-  guest = 'guest',
+  SYSTEM_ADMIN = 'SYSTEM_ADMIN',
+  PROGRAM_OPERATION_STAFF = 'PROGRAM_OPERATION_STAFF',
+  NEW_STAFF = 'NEW_STAFF',
+  GUEST = 'GUEST',
+  MANAGEMENT_STAFF = 'MANAGEMENT_STAFF',
 }
 ```
 
@@ -252,12 +257,12 @@ export const permissions: Permissions<Roles, Subjects, Actions> = {
     can(Actions.create, Post);
   },
 
-  guest({ user, can }) {
+  GUEST({ user, can }) {
     can(Actions.update, Post, { userId: user.id });
   },
 
   operator({ can, cannot, extend }) {
-    extend(Roles.guest);
+    extend(Roles.GUEST);
 
     can(Actions.manage, PostCategory);
     can(Actions.manage, Post);

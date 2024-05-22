@@ -1,0 +1,166 @@
+version: '3.8'
+
+services:
+  es01:
+    image: elasticsearch:8.8.0
+    ports:
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      - 'es-data-es01:/usr/share/elasticsearch/data'
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+      - IPC_LOCK
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1000M
+        reservations:
+          cpus: '1'
+          memory: 500M
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'curl',
+          '--silent',
+          '--fail',
+          'http://localhost:9200/_cluster/health',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      - es01
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 500M
+        reservations:
+          cpus: '0.5'
+          memory: 200M
+
+  mongo0:
+    hostname: mongo0
+    container_name: mongo0
+    image: mongo:latest
+    expose:
+      - 30000
+    ports:
+      - 30000:30000
+    healthcheck:
+      test: ['CMD', 'mongo', '--eval', 'rs.status()']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - 'mongodb_repl_data1:/data/db:z'
+    restart: always
+    entrypoint: 'mongod --bind_ip_all --replSet rs0 --port 30000'
+
+  mongo1:
+    hostname: mongo1
+    container_name: mongo1
+    image: mongo:latest
+    expose:
+      - 30001
+    ports:
+      - 30001:30001
+    healthcheck:
+      test: ['CMD', 'mongo', '--eval', 'rs.status()']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - 'mongodb_repl_data2:/data/db:z'
+    restart: always
+    entrypoint: 'mongod --bind_ip_all --replSet rs0 --port 30001'
+
+  mongo2:
+    hostname: mongo2
+    container_name: mongo2
+    image: mongo:latest
+    expose:
+      - 30002
+    ports:
+      - 30002:30002
+    healthcheck:
+      test: ['CMD', 'mongo', '--eval', 'rs.status()']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - 'mongodb_repl_data3:/data/db:z'
+    restart: always
+    entrypoint: 'mongod --bind_ip_all --replSet rs0 --port 30002'
+
+  mongosetup:
+    image: mongo:latest
+    depends_on:
+      - mongo0
+      - mongo1
+      - mongo2
+    volumes:
+      - ./mongo_setup.sh:/docker-entrypoint-initdb.d/mongo_setup.sh:ro
+    command: ['--replSet", "myReplicaSet']
+    restart: 'no'
+
+  redis-starter:
+    image: 'redis:6.2-alpine'
+    container_name: redis-starter
+    restart: always
+    environment:
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    command: /bin/sh -c "redis-server --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"
+    ports:
+      - '6379:6379'
+    volumes:
+      - 'redis_data:/bitnami/redis-starter/data'
+
+  drs-api:
+    container_name: drs-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - /var/www/uploads:/var/www/uploads
+    depends_on:
+      - redis-starter
+    ports:
+      - 8000:3000
+    restart: always
+
+volumes:
+  mongodb_repl_data1:
+    driver: local
+  mongodb_repl_data2:
+    driver: local
+  mongodb_repl_data3:
+    driver: local
+  redis_data:
+    driver: local
+  es-data-es01:
+  es-data-es02:
+  es-data-es03:

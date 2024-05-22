@@ -62,6 +62,7 @@ export class UserController {
     @CaslConditions() conditions?: ConditionsProxy,
   ): Promise<User> {
     const tokenUser = await userProxy.get();
+    console.log(tokenUser);
 
     return this.userService.findOne(tokenUser.id);
   }

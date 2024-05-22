@@ -14,6 +14,8 @@ export default class UserEntity implements User {
 
   readonly password!: string | null;
 
+  readonly avatar!: string | null;
+
   readonly roles!: Roles[];
 
   readonly createdAt!: Date;

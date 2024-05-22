@@ -20,3 +20,5 @@ export const UPLOAD_RATE_TTL = 'THROTTLE_TTL';
 export const UPLOAD_RATE_LIMIT = 'THROTTLE_LIMIT';
 
 export const CLIENT_URL = 'CLIENT_URL';
+
+export const ELASTIC_SEARCH_URL = 'ELASTIC_SEARCH_URL';

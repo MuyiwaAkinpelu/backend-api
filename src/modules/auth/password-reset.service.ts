@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { TokenService } from './token.service';
 import { PrismaService } from '@providers/prisma';
@@ -44,6 +45,8 @@ export class PasswordResetService {
 
   async resetPassword(userId: string, token: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
     if (!user) {
       throw new BadRequestException('Invalid or expired token');
     }
@@ -62,7 +65,7 @@ export class PasswordResetService {
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        password: newPassword,
+        password: hashedPassword,
       },
     });
 

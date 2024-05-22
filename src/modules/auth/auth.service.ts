@@ -10,6 +10,7 @@ import { SignUpDto } from './dto/sign-up.dto';
 import { UserRepository } from '@modules/user/user.repository';
 import {
   INVALID_CREDENTIALS,
+  MFA_PHONE_OR_TOKEN_REQUIRED,
   NOT_FOUND,
   USER_CONFLICT,
 } from '@constants/errors.constants';
@@ -22,6 +23,8 @@ import { TokenService } from './token.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger('AuthService');
+
   constructor(
     private readonly userRepository: UserRepository,
     private readonly authTokenService: AuthTokenService,
@@ -92,8 +95,8 @@ export class AuthService {
         otp: otp.code,
       });
       Logger.debug(otp.code, 'OTP');
-
-      throw new BadRequestException('PLEASE_VERIFY_OTP');
+      // 400004: Phone number or token is required
+      throw new BadRequestException(MFA_PHONE_OR_TOKEN_REQUIRED);
     }
 
     return this.sign(testUser, deviceIp);
@@ -137,6 +140,7 @@ export class AuthService {
   async saveDeviceIP(userId: string, ip: string) {
     // Save device IP in Redis with expiration (e.g., 24 hours)
     await this.redisService.set(`device:${userId}:${ip}`, 86400);
+    this.logger.log(ip, 'Users IP');
   }
 
   async isDeviceIPNew(userId: string, ip: string): Promise<boolean> {

@@ -1,4 +1,7 @@
 export enum Roles {
-  admin = 'admin',
-  guest = 'guest',
+  SYSTEM_ADMIN = 'SYSTEM_ADMIN',
+  PROGRAM_OPERATION_STAFF = 'PROGRAM_OPERATION_STAFF',
+  NEW_STAFF = 'NEW_STAFF',
+  GUEST = 'GUEST',
+  MANAGEMENT_STAFF = 'MANAGEMENT_STAFF',
 }

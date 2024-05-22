@@ -24,7 +24,7 @@ class TestService {
   }
 
   async createGlobalAdmin(): Promise<AdminUserInterface> {
-    const role: Roles.admin[] = [Roles.admin];
+    const role: Roles.SYSTEM_ADMIN[] = [Roles.SYSTEM_ADMIN];
 
     const signUpData: SignUpDto = getSignUpData();
     const userPassword: string = signUpData.password;
@@ -36,7 +36,7 @@ class TestService {
         id: newAdmin.id,
       },
       data: {
-        roles: ['admin', 'guest'],
+        roles: [Roles.SYSTEM_ADMIN, Roles.GUEST],
       },
     });
 
@@ -77,6 +77,7 @@ class TestService {
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
       password: faker.internet.password({ length: 12 }),
+      roles: [Roles.GUEST],
     };
   }
 

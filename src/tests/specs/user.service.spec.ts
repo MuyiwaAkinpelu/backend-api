@@ -20,6 +20,9 @@ import {
   getPaginatedData,
 } from '@tests/common/user.mock.functions';
 import mockUserRepository from '@tests/mocks/user.repository.mock';
+import { PrismaMiddleware } from '@providers/prisma/prisma.middleware';
+import { DocumentElasticIndex } from '@modules/search/search-index/document.elastic.index';
+import { SearchService } from '@modules/search/search.service';
 
 describe('UserService', () => {
   let userService: UserService;
@@ -38,6 +41,12 @@ describe('UserService', () => {
         UserService,
         { provide: UserRepository, useValue: mockUserRepository },
         PrismaService,
+        PrismaMiddleware,
+        DocumentElasticIndex,
+        {
+          provide: 'SearchServiceInterface',
+          useClass: SearchService,
+        },
       ],
     }).compile();
 

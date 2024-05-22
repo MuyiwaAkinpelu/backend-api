@@ -3,6 +3,7 @@ import { faker } from '@faker-js/faker';
 import { User } from '@prisma/client';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import PaginatedResult = PaginatorTypes.PaginatedResult;
+import { Roles } from '@modules/app/app.roles';
 
 export function getSignUpData(email?: string): SignUpDto {
   return {
@@ -10,6 +11,7 @@ export function getSignUpData(email?: string): SignUpDto {
     firstName: faker.person.firstName(),
     lastName: faker.person.lastName(),
     password: faker.internet.password({ length: 12 }),
+    roles: [Roles.GUEST],
   };
 }
 
@@ -34,7 +36,8 @@ export function createUsers(length: number): User[] {
       id: faker.string.alphanumeric({ length: 12 }),
       ...getSignUpData(),
       phone: null,
-      roles: ['guest'],
+      avatar: null,
+      roles: [Roles.GUEST],
       createdAt: faker.date.anytime(),
       updatedAt: faker.date.anytime(),
       fileSharedIDs: [],

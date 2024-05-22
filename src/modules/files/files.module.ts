@@ -6,6 +6,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { UPLOAD_RATE_LIMIT, UPLOAD_RATE_TTL } from '@constants/env.constants';
 import { DocumentController } from './controllers/document.controller';
 import { DocumentService } from './services/document.service';
+import { SearchService } from '@modules/search/search.service';
+import { PrismaModule } from '@providers/prisma';
 
 @Module({
   imports: [
@@ -19,6 +21,7 @@ import { DocumentService } from './services/document.service';
         },
       ],
     }),
+    PrismaModule,
   ],
   controllers: [DocumentController],
   providers: [
@@ -28,6 +31,11 @@ import { DocumentService } from './services/document.service';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    {
+      provide: 'SearchServiceInterface',
+      useClass: SearchService,
+    },
+    SearchService,
   ],
 })
 export class FilesModule {}

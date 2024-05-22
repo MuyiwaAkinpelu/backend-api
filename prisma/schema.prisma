@@ -14,7 +14,8 @@ model User {
   firstName  String?
   lastName   String?
   password   String
-  roles      Roles[]  @default([guest])
+  avatar     String?
+  roles      Roles[]  @default([GUEST])
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now())
   isVerified Boolean? @default(false)
@@ -39,8 +40,11 @@ model TokenWhiteList {
 }
 
 enum Roles {
-  admin
-  guest
+  SYSTEM_ADMIN
+  PROGRAM_OPERATION_STAFF
+  NEW_STAFF
+  GUEST
+  MANAGEMENT_STAFF
 }
 
 model File {

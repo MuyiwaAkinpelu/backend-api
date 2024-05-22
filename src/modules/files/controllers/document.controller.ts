@@ -14,7 +14,7 @@ import {
   UseInterceptors,
   Version,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { DocumentService } from '../services/document.service';
 import { UploadService } from '../services/upload.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -22,6 +22,7 @@ import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import { CaslUser, UserProxy } from '@modules/casl';
 import { PaginationDTO } from '../dto/pagination.dto';
+import { DocumentSearchDTO } from '../dto/document-search.dto';
 
 @ApiTags('Documents')
 @Controller('documents')
@@ -30,6 +31,16 @@ export class DocumentController {
     private readonly documentService: DocumentService,
     private readonly uploadService: UploadService,
   ) {}
+
+  @Version('1')
+  @ApiQuery({ type: DocumentSearchDTO })
+  @ApiOperation({ summary: 'Search within documents' })
+  @ApiResponse({ status: 200, description: 'Search successful' })
+  @ApiBearerAuth()
+  @Get('/search')
+  public async search(@Query() query: any): Promise<any> {
+    return this.documentService.search(query.q);
+  }
 
   @Version('1')
   @Post('upload')

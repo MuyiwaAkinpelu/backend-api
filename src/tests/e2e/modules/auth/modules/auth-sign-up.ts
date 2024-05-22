@@ -2,6 +2,7 @@ import DefaultContext from '@tests/e2e/context/default-context';
 import { User } from '@prisma/client';
 import { AUTH_SIGN_UP } from '@tests/e2e/common/routes';
 import { SignUpDto } from '@modules/auth/dto/sign-up.dto';
+import { Roles } from '@modules/app/app.roles';
 
 export default (ctx: DefaultContext) => {
   let user: User;
@@ -21,6 +22,7 @@ export default (ctx: DefaultContext) => {
       password: user.password,
       firstName: user.firstName,
       lastName: user.lastName,
+      roles: [Roles.GUEST],
     };
 
     return ctx.request.post(AUTH_SIGN_UP).send(busyEmailDto).expect(409);
