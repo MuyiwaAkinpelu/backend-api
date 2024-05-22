@@ -65,3 +65,24 @@ spec:
         - name: 'mongo-data-dir'
           persistentVolumeClaim:
             claimName: 'mongo-data'
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-creds
+type: Opaque
+data:
+  password: ZG9rOHNtb25nbwo= # dok8smongo
+  username: YWRtaW4K # admin
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-data
+spec:
+  resources:
+    requests:
+      storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
