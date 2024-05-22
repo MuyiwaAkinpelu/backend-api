@@ -41,3 +41,40 @@ spec:
     - port: 80
       targetPort: 3000
   type: LoadBalancer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drs-api-config
+  namespace: backend
+data:
+  DEFAULT_PAGE_SIZE: '10'
+  # Redis Config
+  REDIS_HOST: 'drs-redis-do-user-16324433-0.c.db.ondigitalocean.com'
+  REDIS_PORT: '25061'
+  # MAIL Config
+  MAIL_FROM: 'noreply@drs.scidar.org'
+  MAIL_HOST: 'in-v3.mailjet.com'
+  MAIL_PORT: '465'
+  MAIL_USER: '5506be9938b4c01b526f396c0a9130be'
+  # AWS Config
+  AWS_S3_BUCKET: 'scidar-drs-uploads'
+  AWS_ACCESS_KEY_ID: 'AKIAVRUVSHAG6QSJU5T2'
+  AWS_S3_REGION: 'us-east-1'
+  # THROTTLER - RATE LIMITING
+  UPLOAD_RATE_TTL: '60'
+  UPLOAD_RATE_LIMIT: '3'
+  CLIENT_URL: 'https://drs.scidar.org'
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: drs-api-secret
+  namespace: backend
+type: Opaque
+data:
+  DATABASE_URL: 'bW9uZ29kYitzcnY6Ly9kb2FkbWluOjY0ajE5bFBhM1NrcTg1STdAZHJzLWRiLWRkYzU4ZDhhLm1vbmdvLm9uZGlnaXRhbG9jZWFuLmNvbS9hZG1pbj9hdXRoU291cmNlPWFkbWluJnJlcGxpY2FTZXQ9ZHJzLWRiJnRscz10cnVl'
+  SWAGGER_PASSWORD: 'YWRtaW4='
+  REDIS_PASS: 'QVZOU19YMm9JenE0WUVYODNSbEhwYlA3'
+  MAIL_PASSWORD: 'NjU1NjE5NmMzNmEyYzk4N2Q2MGM2MTU3ODUwMzk2YmQ='
+  AWS_SECRET_ACCESS_KEY: 'QU1RbVI2Qno1eDRZaHhpL0FBek54MURHT0hRMnRYOTZVOXNHcm9UQQ=='
