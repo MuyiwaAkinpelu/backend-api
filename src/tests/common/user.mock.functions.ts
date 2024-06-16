@@ -42,6 +42,7 @@ export function createUsers(length: number): User[] {
       updatedAt: faker.date.anytime(),
       fileSharedIDs: [],
       isVerified: true,
+      isActive: true,
     };
     result.push(user);
   }

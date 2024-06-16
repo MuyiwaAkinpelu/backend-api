@@ -19,11 +19,15 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now())
   isVerified Boolean? @default(false)
+  isActive   Boolean? @default(false)
 
-  filesUploaded File[] @relation("uploadedBy") // files you uploaded
+  filesUploaded File[] @relation("UploadedDocuments") // files you uploaded
 
   fileSharedIDs String[] @db.ObjectId // files shared with you
   filesShared   File[]   @relation(fields: [fileSharedIDs], references: [id])
+
+  documentsApproved    File[] @relation("ApprovedDocuments")
+  documentsDisapproved File[] @relation("DisapprovedDocuments")
 
   tokens Token[]
 }
@@ -47,24 +51,41 @@ enum Roles {
   MANAGEMENT_STAFF
 }
 
+enum DocumentApprovalStatus {
+  NOT_REQUESTED
+  PENDING
+  APPROVED
+  DISAPPROVED
+}
+
+enum DocumentVisibility {
+  PRIVATE
+  PUBLIC
+}
+
 model File {
   id       String  @id @default(auto()) @map("_id") @db.ObjectId
   filename String?
   path     String
 
-  uploader   User   @relation(fields: [uploaderId], references: [id], "uploadedBy")
+  uploader   User   @relation(fields: [uploaderId], references: [id], "UploadedDocuments")
   uploaderId String @db.ObjectId
 
-  isApproved        Boolean  @default(false)
-  isPublic          Boolean  @default(false)
+  approvalStatus    DocumentApprovalStatus @default(NOT_REQUESTED)
+  visibility        DocumentVisibility     @default(PRIVATE)
   size              Int // File size in bytes
   fileType          String? // Type of file (e.g., image, document)
-  uploadDate        DateTime @default(now()) // Date when the file was uploaded
+  uploadDate        DateTime               @default(now()) // Date when the file was uploaded
   description       String?
   tags              String[] // Tags or keywords associated with the file
   originalFilename  String // Original filename of the uploaded file
   contentType       String // MIME type of the file
   disapprovalReason String? // Reason for disapproval, if applicable
+
+  approvedById    String? @db.ObjectId
+  approvedBy      User?   @relation("ApprovedDocuments", fields: [approvedById], references: [id])
+  disapprovedById String? @db.ObjectId
+  disapprovedBy   User?   @relation("DisapprovedDocuments", fields: [disapprovedById], references: [id])
 
   sharedWithIDs String[] @db.ObjectId
   sharedWith    User[]   @relation(fields: [sharedWithIDs], references: [id])

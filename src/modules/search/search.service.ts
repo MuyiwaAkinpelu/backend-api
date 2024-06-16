@@ -18,7 +18,7 @@ export class SearchService
   logger = new Logger(SearchService.name);
 
   constructor(@Inject() private readonly configService: ConfigService) {
-    super(SearchConfig.searchConfig(process.env.ELASTIC_SEARCH_URL));
+    super(SearchConfig.searchConfig(process.env.ELASTICSEARCH_URL));
   }
 
   public async insertIndex(bulkData: any): Promise<any> {

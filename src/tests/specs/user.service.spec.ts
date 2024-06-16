@@ -23,6 +23,8 @@ import mockUserRepository from '@tests/mocks/user.repository.mock';
 import { PrismaMiddleware } from '@providers/prisma/prisma.middleware';
 import { DocumentElasticIndex } from '@modules/search/search-index/document.elastic.index';
 import { SearchService } from '@modules/search/search.service';
+import { NotFoundException } from '@nestjs/common';
+import { USER_NOT_FOUND } from '@constants/errors.constants';
 
 describe('UserService', () => {
   let userService: UserService;
@@ -83,9 +85,12 @@ describe('UserService', () => {
         mockUserRepository.findById.mockReturnValueOnce(null);
       });
 
-      it('should return null', async () => {
+      it('should throw error', async () => {
         const id = faker.string.alphanumeric();
-        expect(await userService.findById(id)).toBe(null);
+
+        await expect(async () => {
+          await userService.findById(id);
+        }).rejects.toThrow(new NotFoundException(USER_NOT_FOUND));
       });
     });
   });

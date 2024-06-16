@@ -34,6 +34,10 @@ export default class UserBaseEntity extends PartialType(UserEntity) {
   @Expose()
   declare readonly isVerified: boolean;
 
+  @ApiProperty({ type: Boolean })
+  @Expose()
+  declare readonly isActive: boolean;
+
   @ApiProperty({ type: Array })
   @Expose()
   declare readonly roles: Roles[];

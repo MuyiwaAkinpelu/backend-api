@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
-import { UploadService } from './services/upload.service';
+import { UploadService } from './upload.service';
 import { seconds, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { UPLOAD_RATE_LIMIT, UPLOAD_RATE_TTL } from '@constants/env.constants';
-import { DocumentController } from './controllers/document.controller';
-import { DocumentService } from './services/document.service';
+import { DocumentController } from './document.controller';
+import { DocumentService } from './document.service';
 import { SearchService } from '@modules/search/search.service';
 import { PrismaModule } from '@providers/prisma';
+import { FileRepository } from './file.repository';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PrismaModule } from '@providers/prisma';
   controllers: [DocumentController],
   providers: [
     DocumentService,
+    FileRepository,
     UploadService,
     {
       provide: APP_GUARD,

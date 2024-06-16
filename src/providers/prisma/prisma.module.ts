@@ -10,7 +10,8 @@ import { PrismaMiddleware } from './prisma.middleware';
 import { SearchModule } from '@modules/search/search.module';
 import { DocumentElasticIndex } from '@modules/search/search-index/document.elastic.index';
 import { SearchService } from '@modules/search/search.service';
-import { DocumentService } from '@modules/files/services/document.service';
+import { DocumentService } from '@modules/files/document.service';
+import { FileRepository } from '@modules/files/file.repository';
 
 @Module({
   providers: [
@@ -21,6 +22,7 @@ import { DocumentService } from '@modules/files/services/document.service';
       useClass: SearchService,
     },
     DocumentService,
+    FileRepository,
     DocumentElasticIndex,
   ],
   exports: [PrismaService],

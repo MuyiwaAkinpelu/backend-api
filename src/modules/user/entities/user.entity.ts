@@ -24,5 +24,7 @@ export default class UserEntity implements User {
 
   readonly isVerified!: boolean;
 
+  readonly isActive!: boolean;
+
   readonly fileSharedIDs!: string[];
 }

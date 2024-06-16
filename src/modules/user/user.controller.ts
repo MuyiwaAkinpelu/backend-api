@@ -1,8 +1,19 @@
-import { Controller, Get, Patch, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import {
   ApiBearerAuth,
   ApiExtraModels,
+  ApiOperation,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
@@ -27,6 +38,8 @@ import UserBaseEntity from '@modules/user/entities/user-base.entity';
 import { UserHook } from '@modules/user/user.hook';
 import ApiOkBaseResponse from '@decorators/api-ok-base-response.decorator';
 import { PaginationDTO } from './dto/pagination.dto';
+import { UpdateUserRolesDTO } from './dto/update-user-roles.dto';
+import { SetUserRoleDTO } from './dto/set-user-role.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -37,8 +50,9 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Get all users' })
   @ApiQuery({ name: 'where', required: false, type: 'string' })
-  @ApiQuery({ name: 'orderBy', required: false, type: 'string' })
+  @ApiQuery({ name: 'sortBy', required: false, type: 'string' })
   @ApiOkBaseResponse({ dto: UserBaseEntity, isArray: true })
   @UseGuards(AccessGuard)
   @Serialize(UserBaseEntity)
@@ -46,13 +60,14 @@ export class UserController {
   async findAll(
     @Query() paginationDTO: PaginationDTO,
     @Query('where', WherePipe) where?: Prisma.UserWhereInput,
-    @Query('orderBy', OrderByPipe)
-    orderBy?: Prisma.UserOrderByWithRelationInput,
+    @Query('sortBy', OrderByPipe)
+    sortBy?: Prisma.UserOrderByWithRelationInput,
   ): Promise<PaginatorTypes.PaginatedResult<User>> {
-    return this.userService.findAll(paginationDTO, where, orderBy);
+    return this.userService.findAll(paginationDTO, where, sortBy);
   }
 
   @Get('me')
+  @ApiOperation({ summary: 'Get authenticated user details' })
   @ApiOkBaseResponse({ dto: UserBaseEntity })
   @UseGuards(AccessGuard)
   @Serialize(UserBaseEntity)
@@ -68,6 +83,7 @@ export class UserController {
   }
 
   @Patch('me')
+  @ApiOperation({ summary: 'Patch user' })
   @UseGuards(AccessGuard)
   @Serialize(UserBaseEntity)
   @UseAbility(Actions.update, UserEntity, UserHook)
@@ -82,7 +98,88 @@ export class UserController {
     console.log(tokenUser);
     console.log(subject);
     console.log(conditions.toMongo());
-
     return subject;
+  }
+
+  /**
+   * Update the roles of a user.
+   * @param userId The ID of the user to update.
+   * @param updateUserRolesDTO The new roles to assign to the user.
+   * @returns The updated user.
+   */
+  @Put(':userId/roles')
+  @Serialize(UserBaseEntity)
+  @ApiOperation({ summary: 'Update user roles' })
+  async updateUserRoles(
+    @Param('userId') userId: string,
+    @Body() updateUserRolesDTO: UpdateUserRolesDTO,
+  ) {
+    const { roles } = updateUserRolesDTO;
+    return this.userService.updateUserRoles(userId, roles);
+  }
+
+  /**
+   * Set the role of a user.
+   * @param userId The ID of the user to update.
+   * @param setUserRoleDTO The new role to assign to the user.
+   * @returns The updated user.
+   */
+  @Put(':userId/role')
+  @Serialize(UserBaseEntity)
+  @ApiOperation({ summary: 'Set user role' })
+  async setUserRole(
+    @Param('userId') userId: string,
+    @Body() setUserRoleDTO: SetUserRoleDTO,
+  ) {
+    const { role } = setUserRoleDTO;
+    return this.userService.setUserRole(userId, role);
+  }
+
+  /**
+   * Delete a user.
+   * @param userId The ID of the user to delete.
+   * @returns A confirmation message.
+   */
+  @Delete(':userId')
+  @Serialize(UserBaseEntity)
+  @ApiOperation({ summary: 'Delete user' })
+  async deleteUser(@Param('userId') userId: string) {
+    return this.userService.deleteUser(userId);
+  }
+
+  /**
+   * Activate a user account.
+   * @param userId The ID of the user to activate.
+   * @returns The updated user.
+   */
+  @Put(':userId/activate')
+  @Serialize(UserBaseEntity)
+  @ApiOperation({ summary: 'Activate user account' })
+  async activateUser(@Param('userId') userId: string) {
+    return this.userService.activateUser(userId);
+  }
+
+  /**
+   * Deactivate a user account.
+   * @param userId The ID of the user to deactivate.
+   * @returns The updated user.
+   */
+  @Put(':userId/deactivate')
+  @Serialize(UserBaseEntity)
+  @ApiOperation({ summary: 'Deactivate user account' })
+  async deactivateUser(@Param('userId') userId: string) {
+    return this.userService.deactivateUser(userId);
+  }
+
+  /**
+   * Verify a user account.
+   * @param userId The ID of the user to verify.
+   * @returns The updated user.
+   */
+  @Put(':userId/verify')
+  @Serialize(UserBaseEntity)
+  @ApiOperation({ summary: 'Verify user account' })
+  async verifyUser(@Param('userId') userId: string) {
+    return this.userService.verifyUser(userId);
   }
 }

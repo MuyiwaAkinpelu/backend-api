@@ -13,17 +13,33 @@ export class ElasticSearchBody {
 }
 
 export class DocumentSearchObject {
-  public static searchObject(q: any) {
+  public static searchObject(q: string) {
     const body = this.elasticSearchBody(q);
-    return { index: documentIndex._index, body, q };
+    return { index: documentIndex._index, body };
   }
 
-  public static elasticSearchBody(q: any): ElasticSearchBody {
+  public static elasticSearchBody(q: string): ElasticSearchBody {
     const query = {
-      match: {
-        url: q,
+      bool: {
+        should: [
+          {
+            multi_match: {
+              query: q,
+              fields: [
+                'originalFilename^3', // Boost original filename matches
+                'description',
+                'fileType',
+                'contentType',
+              ],
+            },
+          },
+          {
+            term: { tags: q }, // Exact match for tags
+          },
+        ],
       },
     };
+
     return new ElasticSearchBody(10, 0, query);
   }
 }

@@ -21,6 +21,12 @@ export class UserRepository {
     });
   }
 
+  /**
+   * @desc Find a user by ID
+   * @param id string
+   * @returns Promise<User | null>
+   *       If the user is not found, returns null
+   */
   findById(id: string): Promise<User> {
     return this.prisma.user.findUnique({
       where: { id },
@@ -61,6 +67,30 @@ export class UserRepository {
     return this.paginate(this.prisma.user, {
       where,
       orderBy,
+    });
+  }
+
+  /**
+   * @desc Update a user by ID
+   * @param id string
+   * @param data Prisma.UserUpdateInput
+   * @returns Promise<User>
+   */
+  async updateUser(id: string, data: Prisma.UserUpdateInput): Promise<User> {
+    return await this.prisma.user.update({
+      where: { id },
+      data,
+    });
+  }
+
+  /**
+   * @desc Delete a user by ID
+   * @param id string
+   * @returns Promise<User>
+   */
+  async deleteUser(id: string): Promise<User> {
+    return await this.prisma.user.delete({
+      where: { id },
     });
   }
 }

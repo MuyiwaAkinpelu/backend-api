@@ -31,6 +31,7 @@ export const PHOTO_NOT_FOUND = '404029: Photo not found';
 export const REGION_NOT_FOUND = '404030: Region not found';
 export const PERMISSIONS_NOT_FOUND = '404031: Permissions not found';
 export const INVITE_IS_INVALID = '404032: Invite is invalid';
+export const DOCUMENT_NOT_FOUND = '404033: Document not found';
 
 export const UNAUTHORIZED_RESOURCE = '401000: Unauthorized resource';
 export const INVALID_CREDENTIALS = '401001: Invalid credentials';
