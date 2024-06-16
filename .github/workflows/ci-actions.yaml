@@ -14,11 +14,6 @@ on:
         description: 'Image version'
         required: true
 #2
-env:
-  REGISTRY: 'registry.digitalocean.com/scidar'
-  IMAGE_NAME: 'drs-api'
-
-#3
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
@@ -30,7 +25,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build container image
-        run: docker build -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
+        run: docker build -t ${{ vars.REGISTRY }}/${{ vars.IMAGE_NAME }}:$(echo $GITHUB_SHA | head -c7) .
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
@@ -41,7 +36,7 @@ jobs:
         run: doctl registry login --expiry-seconds 600
 
       - name: Remove all old images
-        run: if [ ! -z "$(doctl registry repository list | grep "$(echo $IMAGE_NAME)")" ]; then doctl registry repository delete-manifest $(echo $IMAGE_NAME) $(doctl registry repository list-tags $(echo $IMAGE_NAME) | grep -o "sha.*") --force; else echo "No repository"; fi
+        run: if [ ! -z "$(doctl registry repository list | grep "${{ vars.IMAGE_NAME }}")" ]; then doctl registry repository delete-manifest ${{ vars.IMAGE_NAME }} $(doctl registry repository list-tags ${{ vars.IMAGE_NAME }} | grep -o "sha.*") --force; else echo "No repository"; fi
 
       - name: Push image to DigitalOcean Container Registry
-        run: docker push $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
+        run: docker push ${{ vars.REGISTRY }}/${{ vars.IMAGE_NAME }}:$(echo $GITHUB_SHA | head -c7)
