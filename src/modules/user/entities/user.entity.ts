@@ -27,4 +27,7 @@ export default class UserEntity implements User {
   readonly isActive!: boolean;
 
   readonly fileSharedIDs!: string[];
+
+  readonly projectMemberProjectIDs: string[];
+  readonly projectManagerProjectIDs: string[];
 }

@@ -22,6 +22,7 @@ import { REDIS_HOST, REDIS_PASS, REDIS_PORT } from '@constants/env.constants';
 import { RedisService } from '@modules/auth/redis.service';
 import { MailModule } from '@modules/mail/mail.module';
 import { FilesModule } from '@modules/files/files.module';
+import { ProjectModule } from '@modules/project/project.module';
 
 @Module({
   controllers: [],
@@ -61,6 +62,7 @@ import { FilesModule } from '@modules/files/files.module';
     AuthModule,
     MailModule,
     FilesModule,
+    ProjectModule,
   ],
   providers: [
     AuthTokenService,

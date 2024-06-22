@@ -29,6 +29,14 @@ model User {
   documentsApproved    File[] @relation("ApprovedDocuments")
   documentsDisapproved File[] @relation("DisapprovedDocuments")
 
+  createdProjects Project[] @relation("ProjectCreatedBy")
+  updatedProjects Project[] @relation("ProjectUpdatedBy")
+
+  projectMemberProjectIDs  String[]  @db.ObjectId
+  projectMemberProjects    Project[] @relation(fields: [projectMemberProjectIDs], references: [id], name: "ProjectMemberProjects")
+  projectManagerProjectIDs String[]  @db.ObjectId
+  projectManagerProjects   Project[] @relation(fields: [projectMemberProjectIDs], references: [id], name: "ProjectManagerProjects")
+
   tokens Token[]
 }
 
@@ -103,6 +111,27 @@ model Token {
   type      TokenType    @default(value: OTP)
 }
 
+model Project {
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  category    ProjectCategory @default(value: SCIDAR)
+  description String?
+  tags        String[] // Tags or keywords associated with the projects
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdByUserId String? @db.ObjectId
+  createdBy       User?   @relation(fields: [createdByUserId], references: [id], name: "ProjectCreatedBy")
+  updatedByUserId String? @db.ObjectId
+  updatedBy       User?   @relation(fields: [updatedByUserId], references: [id], name: "ProjectUpdatedBy")
+
+  projectMembersIDs  String[] @db.ObjectId
+  projectMembers     User[]   @relation(fields: [projectMembersIDs], references: [id], name: "ProjectMemberProjects")
+  projectManagersIDs String[] @db.ObjectId
+  projectManagers    User[]   @relation(fields: [projectManagersIDs], references: [id], name: "ProjectManagerProjects")
+}
+
 enum TokenUseCase {
   PWD_RESET // Reset Password
   LOGIN // Login
@@ -113,4 +142,9 @@ enum TokenUseCase {
 enum TokenType {
   HEX
   OTP
+}
+
+enum ProjectCategory {
+  SCIDAR
+  SOLINA_HEALTH
 }

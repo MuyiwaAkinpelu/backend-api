@@ -40,12 +40,14 @@ import ApiOkBaseResponse from '@decorators/api-ok-base-response.decorator';
 import { PaginationDTO } from './dto/pagination.dto';
 import { UpdateUserRolesDTO } from './dto/update-user-roles.dto';
 import { SetUserRoleDTO } from './dto/set-user-role.dto';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @ApiExtraModels(UserBaseEntity)
 @ApiBaseResponses()
 @Controller('users')
+@SkipThrottle()
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

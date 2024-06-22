@@ -43,6 +43,8 @@ export function createUsers(length: number): User[] {
       fileSharedIDs: [],
       isVerified: true,
       isActive: true,
+      projectMemberProjectIDs: [],
+      projectManagerProjectIDs: [],
     };
     result.push(user);
   }
