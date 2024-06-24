@@ -1,6 +1,14 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
-  DocumentApprovalStatus,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  ApprovalRequest,
+  ApprovalStatus,
   DocumentVisibility,
   File,
   Prisma,
@@ -12,8 +20,19 @@ import { DocumentFiltersDTO } from './dto/document-filter.dto';
 import { DocumentsPaginationDTO } from './dto/documents-pagination.dto';
 import { MyDocumentsPaginationDTO } from './dto/my-documents-pagination.dto';
 import { FileRepository } from './file.repository';
-import { DOCUMENT_NOT_FOUND } from '@constants/errors.constants';
+import {
+  DOCUMENT_ALREADY_SUBMITTED,
+  DOCUMENT_NOT_FOUND,
+  PROJECT_NOT_FOUND,
+  REQUEST_NOT_FOUND,
+  USER_NOT_FOUND,
+  USER_NOT_IN_PROJECT,
+  USER_NOT_MANAGER,
+} from '@constants/errors.constants';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
+import { ApprovalRequestRepository } from './approval-request.repository';
+import { UserRepository } from '@modules/user/user.repository';
+import { ProjectRepository } from '@modules/project/project.repository';
 
 @Injectable()
 export class DocumentService {
@@ -23,6 +42,9 @@ export class DocumentService {
     private readonly searchService: SearchService,
     private readonly prisma: PrismaService,
     private readonly fileRepository: FileRepository,
+    private readonly approvalRequestRepository: ApprovalRequestRepository,
+    private readonly userRepository: UserRepository,
+    private readonly projectRepository: ProjectRepository,
   ) {
     this.logger = new Logger(DocumentService.name);
   }
@@ -145,48 +167,165 @@ export class DocumentService {
     };
   }
 
-  async requestApproval(documentId: string): Promise<File> {
-    const file = await this.fileRepository.findById(documentId);
-    if (!file) {
-      throw new NotFoundException(DOCUMENT_NOT_FOUND);
-    }
-    return this.fileRepository.updateFile(documentId, {
-      approvalStatus: DocumentApprovalStatus.PENDING,
-    });
-  }
-
-  async approveDocument(documentId: string, userId: string): Promise<File> {
-    const file = await this.fileRepository.findById(documentId);
-    if (!file) {
-      throw new NotFoundException(DOCUMENT_NOT_FOUND);
-    }
-    return this.fileRepository.updateFile(documentId, {
-      approvalStatus: DocumentApprovalStatus.APPROVED,
-      approvedBy: {
-        connect: {
-          id: userId,
-        },
-      },
-    });
-  }
-
-  async disapproveDocument(
+  async submitDocument(
     documentId: string,
     userId: string,
-    disapprovalReason?: string,
-  ): Promise<File> {
-    const file = await this.fileRepository.findById(documentId);
-    if (!file) {
+    projectId: string,
+  ): Promise<ApprovalRequest> {
+    // Validate document existence
+    const document = await this.fileRepository.findById(documentId);
+    if (!document) {
       throw new NotFoundException(DOCUMENT_NOT_FOUND);
     }
-    return this.fileRepository.updateFile(documentId, {
-      approvalStatus: DocumentApprovalStatus.DISAPPROVED,
-      disapprovalReason,
-      disapprovedBy: {
+
+    // Validate user existence
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException(USER_NOT_FOUND);
+    }
+
+    // Validate project existence
+    const isUserPartOfProject =
+      await this.projectRepository.isUserPartOfProject(projectId, userId);
+    if (!isUserPartOfProject) {
+      throw new ForbiddenException(USER_NOT_IN_PROJECT);
+    }
+
+    // Check if the document is already submitted for approval for this project
+    const existingRequest = await this.approvalRequestRepository.findOne({
+      where: {
+        documentId,
+        projectId,
+      },
+    });
+    if (existingRequest) {
+      throw new ConflictException(DOCUMENT_ALREADY_SUBMITTED);
+    }
+
+    return this.approvalRequestRepository.create({
+      document: {
+        connect: {
+          id: documentId,
+        },
+      },
+      project: {
+        connect: {
+          id: projectId,
+        },
+      },
+      submittedBy: {
         connect: {
           id: userId,
         },
       },
+    });
+  }
+
+  async approveRequest(
+    requestId: string,
+    userId: string,
+  ): Promise<ApprovalRequest> {
+    // Validate request existence
+    const request = await this.approvalRequestRepository.findById(requestId);
+    if (!request) {
+      throw new NotFoundException(REQUEST_NOT_FOUND);
+    }
+
+    // Validate user existence
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException(USER_NOT_FOUND);
+    }
+
+    // Validate project existence and user membership (as manager)
+    const isUserManagerOfProject =
+      await this.projectRepository.isUserManagerOfProject(
+        request.projectId,
+        userId,
+      );
+    if (!isUserManagerOfProject) {
+      throw new ForbiddenException(USER_NOT_MANAGER);
+    }
+
+    // Perform operations within a transaction
+    return this.prisma.$transaction(async (transactionClient) => {
+      // Update the approval request status
+      const updatedRequest = await this.approvalRequestRepository.update(
+        requestId,
+        {
+          status: ApprovalStatus.APPROVED,
+          approvedBy: {
+            connect: {
+              id: userId,
+            },
+          },
+        },
+        transactionClient,
+      );
+
+      // Associate the document with the project
+      await this.projectRepository.addDocumentToProject(
+        request.projectId,
+        request.documentId,
+        transactionClient,
+      );
+
+      return updatedRequest;
+    });
+  }
+
+  async declineRequest(
+    requestId: string,
+    userId: string,
+    disapprovalReason?: string,
+  ): Promise<ApprovalRequest> {
+    // Validate request existence
+    const request = await this.approvalRequestRepository.findById(requestId);
+    if (!request) {
+      throw new NotFoundException(REQUEST_NOT_FOUND);
+    }
+
+    // Validate user existence
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException(USER_NOT_FOUND);
+    }
+
+    // Validate project existence and user membership (as manager)
+    const isUserManagerOfProject =
+      await this.projectRepository.isUserManagerOfProject(
+        request.projectId,
+        userId,
+      );
+    if (!isUserManagerOfProject) {
+      throw new ForbiddenException(USER_NOT_MANAGER);
+    }
+
+    // Perform operations within a transaction
+    return this.prisma.$transaction(async (transactionClient) => {
+      // Update the approval request status
+      const updatedRequest = await this.approvalRequestRepository.update(
+        requestId,
+        {
+          status: ApprovalStatus.DECLINED,
+          disapprovalReason,
+          disapprovedBy: {
+            connect: {
+              id: userId,
+            },
+          },
+        },
+        transactionClient,
+      );
+
+      // Associate the document with the project
+      await this.projectRepository.addDocumentToProject(
+        request.projectId,
+        request.documentId,
+        transactionClient,
+      );
+
+      return updatedRequest;
     });
   }
 
@@ -238,7 +377,10 @@ export class DocumentService {
         where.visibility = filters.visibility;
       }
       if (filters.approvalStatus !== undefined) {
-        where.approvalStatus = filters.approvalStatus;
+        where.approvalRequests.some.status = filters.approvalStatus;
+      }
+      if (filters.projectIDs) {
+        where.projectsIDs = { hasSome: filters.projectIDs };
       }
       if (filters.sizeMin !== undefined) {
         where.size = { gte: filters.sizeMin };

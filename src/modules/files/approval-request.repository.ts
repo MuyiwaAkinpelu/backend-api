@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@providers/prisma';
-import { File, Prisma } from '@prisma/client';
+import { ApprovalRequest, Prisma } from '@prisma/client';
 import { paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { PrismaRepositoryClient } from '@providers/prisma/types';
 
 @Injectable()
-export class FileRepository {
+export class ApprovalRequestRepository {
   private readonly paginate: PaginatorTypes.PaginateFunction;
 
   constructor(private prisma: PrismaService) {
@@ -19,59 +19,59 @@ export class FileRepository {
   async findById(
     id: string,
     transactionClient: PrismaRepositoryClient = this.prisma,
-  ): Promise<File> {
-    return transactionClient.file.findUnique({
+  ): Promise<ApprovalRequest> {
+    return transactionClient.approvalRequest.findUnique({
       where: { id },
     });
   }
 
   async findOne(
-    params: Prisma.FileFindFirstArgs,
+    params: Prisma.ApprovalRequestFindFirstArgs,
     transactionClient: PrismaRepositoryClient = this.prisma,
-  ): Promise<File | null> {
-    return transactionClient.file.findFirst(params);
+  ): Promise<ApprovalRequest | null> {
+    return transactionClient.approvalRequest.findFirst(params);
   }
 
   async create(
-    data: Prisma.FileCreateInput,
+    data: Prisma.ApprovalRequestCreateInput,
     transactionClient: PrismaRepositoryClient = this.prisma,
-  ): Promise<File> {
-    return transactionClient.file.create({
+  ): Promise<ApprovalRequest> {
+    return transactionClient.approvalRequest.create({
       data,
     });
   }
 
   async findAll(
-    where: Prisma.FileWhereInput,
-    include: Prisma.FileInclude,
-    orderBy?: Prisma.FileOrderByWithRelationInput,
+    where: Prisma.ApprovalRequestWhereInput,
+    include: Prisma.ApprovalRequestInclude,
+    orderBy?: Prisma.ApprovalRequestOrderByWithRelationInput,
     paginationOptions?: PaginatorTypes.PaginateOptions,
     transactionClient: PrismaRepositoryClient = this.prisma,
-  ): Promise<PaginatorTypes.PaginatedResult<File>> {
+  ): Promise<PaginatorTypes.PaginatedResult<ApprovalRequest>> {
     const paginate = paginator(paginationOptions);
-    return paginate(transactionClient.file, {
+    return paginate(transactionClient.approvalRequest, {
       where,
       orderBy,
       include,
     });
   }
 
-  async updateFile(
+  async update(
     id: string,
-    data: Prisma.FileUpdateInput,
+    data: Prisma.ApprovalRequestUpdateInput,
     transactionClient: PrismaRepositoryClient = this.prisma,
-  ): Promise<File> {
-    return transactionClient.file.update({
+  ): Promise<ApprovalRequest> {
+    return transactionClient.approvalRequest.update({
       where: { id },
       data,
     });
   }
 
-  async deleteFile(
+  async delete(
     id: string,
     transactionClient: PrismaRepositoryClient = this.prisma,
-  ): Promise<File> {
-    return transactionClient.file.delete({
+  ): Promise<ApprovalRequest> {
+    return transactionClient.approvalRequest.delete({
       where: { id },
     });
   }

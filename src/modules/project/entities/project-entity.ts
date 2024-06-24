@@ -21,4 +21,7 @@ export default class ProjectEntity implements Project {
   readonly updatedByUserId: string;
   readonly projectMembersIDs: string[];
   readonly projectManagersIDs: string[];
+  readonly membersIDs: string[];
+  readonly managersIDs: string[];
+  readonly documentsIDs: string[];
 }

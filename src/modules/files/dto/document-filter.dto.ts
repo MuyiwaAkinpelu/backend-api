@@ -8,7 +8,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { DocumentApprovalStatus, DocumentVisibility } from '@prisma/client';
+import { ApprovalStatus, DocumentVisibility } from '@prisma/client';
 
 export class DocumentFiltersDTO {
   @IsOptional()
@@ -37,11 +37,11 @@ export class DocumentFiltersDTO {
 
   @ApiPropertyOptional({
     description: 'Filter files by approval status',
-    enum: DocumentApprovalStatus,
+    enum: ApprovalStatus,
   })
   @IsOptional()
-  @IsEnum(DocumentApprovalStatus)
-  approvalStatus?: DocumentApprovalStatus = DocumentApprovalStatus.APPROVED;
+  @IsEnum(ApprovalStatus)
+  approvalStatus?: ApprovalStatus = ApprovalStatus.APPROVED;
 
   @IsOptional()
   @IsInt()
@@ -128,6 +128,17 @@ export class DocumentFiltersDTO {
     type: [String],
   })
   sharedWithIDs?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  @ApiPropertyOptional({
+    description: 'Filter files approved in specific project IDs',
+    required: false,
+    type: [String],
+  })
+  projectIDs?: string[];
 
   @IsOptional()
   @IsString()

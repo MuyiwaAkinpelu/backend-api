@@ -33,6 +33,7 @@ export const PERMISSIONS_NOT_FOUND = '404031: Permissions not found';
 export const INVITE_IS_INVALID = '404032: Invite is invalid';
 export const DOCUMENT_NOT_FOUND = '404033: Document not found';
 export const PROJECT_NOT_FOUND = '404033: Project not found';
+export const REQUEST_NOT_FOUND = '404034: Document approval request not found';
 
 export const UNAUTHORIZED_RESOURCE = '401000: Unauthorized resource';
 export const INVALID_CREDENTIALS = '401001: Invalid credentials';
@@ -43,6 +44,9 @@ export const UNVERIFIED_LOCATION = '401005: Location is not verified';
 export const MFA_BACKUP_CODE_USED = '401007: Backup code is already used';
 export const INVALID_FCM_TOKEN = '401008: Invalid FCM token';
 export const TOKEN_IS_EXPIRED = '401009: Token is expired';
+export const USER_NOT_IN_PROJECT = '401010: User is not part of the project';
+export const USER_NOT_MANAGER =
+  '401011: User is not a part of project managers';
 
 export const FORBIDDEN_RESOURCE = '403000: Forbidden resource';
 
@@ -121,6 +125,8 @@ export const CAN_NOT_FOLLOW = '409024: Can not follow';
 export const CAN_NOT_UNFOLLOW = '409025: Can not unfollow';
 export const USER_ALREADY_FOLLOWING = '409026: User already following';
 export const INVITE_NOT_AVAILABLE = '409026: Invite not available';
+export const DOCUMENT_ALREADY_SUBMITTED =
+  '409027: Document is already submitted for approval for this project';
 
 export const RATE_LIMIT_EXCEEDED = '429000: Rate limit exceeded';
 

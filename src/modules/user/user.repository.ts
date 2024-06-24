@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { Prisma, User } from '@prisma/client';
+import { PrismaRepositoryClient } from '@providers/prisma/types';
 
 @Injectable()
 export class UserRepository {
@@ -27,8 +28,11 @@ export class UserRepository {
    * @returns Promise<User | null>
    *       If the user is not found, returns null
    */
-  findById(id: string): Promise<User> {
-    return this.prisma.user.findUnique({
+  findById(
+    id: string,
+    transactionClient: PrismaRepositoryClient = this.prisma,
+  ): Promise<User> {
+    return transactionClient.user.findUnique({
       where: { id },
     });
   }
@@ -39,8 +43,11 @@ export class UserRepository {
    * @returns Promise<User | null>
    *       If the user is not found, return null
    */
-  async findOne(params: Prisma.UserFindFirstArgs): Promise<User | null> {
-    return this.prisma.user.findFirst(params);
+  async findOne(
+    params: Prisma.UserFindFirstArgs,
+    transactionClient: PrismaRepositoryClient = this.prisma,
+  ): Promise<User | null> {
+    return transactionClient.user.findFirst(params);
   }
 
   /**
@@ -48,8 +55,11 @@ export class UserRepository {
    * @param data Prisma.UserCreateInput
    * @returns Promise<User>
    */
-  async create(data: Prisma.UserCreateInput): Promise<User> {
-    return this.prisma.user.create({
+  async create(
+    data: Prisma.UserCreateInput,
+    transactionClient: PrismaRepositoryClient = this.prisma,
+  ): Promise<User> {
+    return transactionClient.user.create({
       data,
     });
   }
@@ -63,8 +73,9 @@ export class UserRepository {
   async findAll(
     where: Prisma.UserWhereInput,
     orderBy: Prisma.UserOrderByWithRelationInput,
+    transactionClient: PrismaRepositoryClient = this.prisma,
   ): Promise<PaginatorTypes.PaginatedResult<User>> {
-    return this.paginate(this.prisma.user, {
+    return this.paginate(transactionClient.user, {
       where,
       orderBy,
     });
@@ -76,8 +87,12 @@ export class UserRepository {
    * @param data Prisma.UserUpdateInput
    * @returns Promise<User>
    */
-  async updateUser(id: string, data: Prisma.UserUpdateInput): Promise<User> {
-    return await this.prisma.user.update({
+  async updateUser(
+    id: string,
+    data: Prisma.UserUpdateInput,
+    transactionClient: PrismaRepositoryClient = this.prisma,
+  ): Promise<User> {
+    return await transactionClient.user.update({
       where: { id },
       data,
     });
@@ -88,8 +103,11 @@ export class UserRepository {
    * @param id string
    * @returns Promise<User>
    */
-  async deleteUser(id: string): Promise<User> {
-    return await this.prisma.user.delete({
+  async deleteUser(
+    id: string,
+    transactionClient: PrismaRepositoryClient = this.prisma,
+  ): Promise<User> {
+    return await transactionClient.user.delete({
       where: { id },
     });
   }

@@ -12,6 +12,9 @@ import { DocumentElasticIndex } from '@modules/search/search-index/document.elas
 import { SearchService } from '@modules/search/search.service';
 import { DocumentService } from '@modules/files/document.service';
 import { FileRepository } from '@modules/files/file.repository';
+import { ApprovalRequestRepository } from '@modules/files/approval-request.repository';
+import { UserRepository } from '@modules/user/user.repository';
+import { ProjectRepository } from '@modules/project/project.repository';
 
 @Module({
   providers: [
@@ -22,7 +25,10 @@ import { FileRepository } from '@modules/files/file.repository';
       useClass: SearchService,
     },
     DocumentService,
+    UserRepository,
     FileRepository,
+    ProjectRepository,
+    ApprovalRequestRepository,
     DocumentElasticIndex,
   ],
   exports: [PrismaService],

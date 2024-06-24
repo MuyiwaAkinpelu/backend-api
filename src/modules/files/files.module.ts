@@ -9,6 +9,9 @@ import { DocumentService } from './document.service';
 import { SearchService } from '@modules/search/search.service';
 import { PrismaModule } from '@providers/prisma';
 import { FileRepository } from './file.repository';
+import { ApprovalRequestRepository } from './approval-request.repository';
+import { UserRepository } from '@modules/user/user.repository';
+import { ProjectRepository } from '@modules/project/project.repository';
 
 @Module({
   imports: [
@@ -28,6 +31,9 @@ import { FileRepository } from './file.repository';
   providers: [
     DocumentService,
     FileRepository,
+    UserRepository,
+    ProjectRepository,
+    ApprovalRequestRepository,
     UploadService,
     {
       provide: APP_GUARD,

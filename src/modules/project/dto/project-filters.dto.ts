@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ProjectCategory } from '@prisma/client';
+import { Transform } from 'class-transformer';
 
 export class ProjectFiltersDTO {
   @ApiPropertyOptional({ enum: ProjectCategory })
@@ -51,6 +52,7 @@ export class ProjectFiltersDTO {
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
   @ApiPropertyOptional({
     description: 'Filter projects by tags',
     required: false,

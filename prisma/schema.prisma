@@ -26,8 +26,9 @@ model User {
   fileSharedIDs String[] @db.ObjectId // files shared with you
   filesShared   File[]   @relation(fields: [fileSharedIDs], references: [id])
 
-  documentsApproved    File[] @relation("ApprovedDocuments")
-  documentsDisapproved File[] @relation("DisapprovedDocuments")
+  submittedRequests    ApprovalRequest[] @relation("SubmittedRequests")
+  documentsApproved    ApprovalRequest[]            @relation("ApprovedRequests")
+  documentsDisapproved ApprovalRequest[]            @relation("DisapprovedRequests")
 
   createdProjects Project[] @relation("ProjectCreatedBy")
   updatedProjects Project[] @relation("ProjectUpdatedBy")
@@ -63,7 +64,7 @@ enum DocumentApprovalStatus {
   NOT_REQUESTED
   PENDING
   APPROVED
-  DISAPPROVED
+  DECLINED
 }
 
 enum DocumentVisibility {
@@ -79,7 +80,6 @@ model File {
   uploader   User   @relation(fields: [uploaderId], references: [id], "UploadedDocuments")
   uploaderId String @db.ObjectId
 
-  approvalStatus    DocumentApprovalStatus @default(NOT_REQUESTED)
   visibility        DocumentVisibility     @default(PRIVATE)
   size              Int // File size in bytes
   fileType          String? // Type of file (e.g., image, document)
@@ -88,15 +88,41 @@ model File {
   tags              String[] // Tags or keywords associated with the file
   originalFilename  String // Original filename of the uploaded file
   contentType       String // MIME type of the file
-  disapprovalReason String? // Reason for disapproval, if applicable
 
-  approvedById    String? @db.ObjectId
-  approvedBy      User?   @relation("ApprovedDocuments", fields: [approvedById], references: [id])
-  disapprovedById String? @db.ObjectId
-  disapprovedBy   User?   @relation("DisapprovedDocuments", fields: [disapprovedById], references: [id])
-
+  approvalRequests ApprovalRequest[]
   sharedWithIDs String[] @db.ObjectId
   sharedWith    User[]   @relation(fields: [sharedWithIDs], references: [id])
+
+  projectsIDs String[]  @db.ObjectId
+  projects    Project[] @relation("ProjectDocuments", fields: [projectsIDs], references: [id])
+}
+
+model ApprovalRequest {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  status        ApprovalStatus @default(PENDING)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  documentId    String         @db.ObjectId
+  document      File           @relation(fields: [documentId], references: [id])
+  projectId     String         @db.ObjectId
+  project       Project        @relation(fields: [projectId], references: [id])
+  submittedById String?        @db.ObjectId
+  submittedBy   User?          @relation("SubmittedRequests", fields: [submittedById], references: [id])
+
+  disapprovalReason String? // Reason for disapproval, if applicable
+  approvedById     String?           @db.ObjectId
+  approvedBy       User?             @relation("ApprovedRequests", fields: [approvedById], references: [id])
+  disapprovedById  String?           @db.ObjectId
+  disapprovedBy    User?             @relation("DisapprovedRequests", fields: [disapprovedById], references: [id])
+
+
+  @@index([documentId, projectId])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  DECLINED
 }
 
 model Token {
@@ -126,10 +152,13 @@ model Project {
   updatedByUserId String? @db.ObjectId
   updatedBy       User?   @relation(fields: [updatedByUserId], references: [id], name: "ProjectUpdatedBy")
 
-  projectMembersIDs  String[] @db.ObjectId
-  projectMembers     User[]   @relation(fields: [projectMembersIDs], references: [id], name: "ProjectMemberProjects")
-  projectManagersIDs String[] @db.ObjectId
-  projectManagers    User[]   @relation(fields: [projectManagersIDs], references: [id], name: "ProjectManagerProjects")
+  membersIDs       String[]          @db.ObjectId
+  members          User[]            @relation(fields: [membersIDs], references: [id], name: "ProjectMemberProjects")
+  managersIDs      String[]          @db.ObjectId
+  managers         User[]            @relation(fields: [managersIDs], references: [id], name: "ProjectManagerProjects")
+  approvalRequests ApprovalRequest[]
+  documentsIDs     String[]          @db.ObjectId
+  documents        File[]            @relation(fields: [documentsIDs], references: [id], name: "ProjectDocuments")
 }
 
 enum TokenUseCase {

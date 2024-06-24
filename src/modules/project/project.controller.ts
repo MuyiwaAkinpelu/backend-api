@@ -26,6 +26,8 @@ import { CreateProjectDTO } from './dto/create-project.dto';
 import { UpdateProjectDTO } from './dto/update-project.dto';
 import { SkipThrottle } from '@nestjs/throttler';
 import { ListProjectsDTO } from './dto/projects.dto';
+import { AddProjectManagerDTO } from './dto/add-manager.dto';
+import { PROJECT_NOT_FOUND } from '@constants/errors.constants';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
@@ -98,17 +100,17 @@ export class ProjectController {
     return this.projectService.delete(id);
   }
 
-  @Post(':projectId/members')
+  @Post(':projectId/members/:userId')
   @ApiOperation({ summary: 'Add member to project' })
   @ApiResponse({
     status: 200,
     description: 'Member added',
     type: ProjectBaseEntity,
   })
-  @ApiResponse({ status: 404, description: 'Project not found' })
+  @ApiResponse({ status: 404, description: PROJECT_NOT_FOUND })
   async addMember(
     @Param('projectId') projectId: string,
-    @Body('userId') userId: string,
+    @Param('userId') userId: string,
   ): Promise<Project> {
     return this.projectService.addMember(projectId, userId);
   }
@@ -128,7 +130,7 @@ export class ProjectController {
     return this.projectService.removeMember(projectId, userId);
   }
 
-  @Post(':projectId/managers')
+  @Post(':projectId/managers/:userId')
   @ApiOperation({ summary: 'Add manager to project' })
   @ApiResponse({
     status: 200,
@@ -138,7 +140,7 @@ export class ProjectController {
   @ApiResponse({ status: 404, description: 'Project not found' })
   async addManager(
     @Param('projectId') projectId: string,
-    @Body('userId') userId: string,
+    @Param('userId') userId: string,
   ): Promise<Project> {
     return this.projectService.addManager(projectId, userId);
   }

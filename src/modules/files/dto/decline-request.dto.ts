@@ -1,9 +1,9 @@
 import { IsString, IsOptional, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class DisapproveDocumentDTO {
+export class DeclineRequestDTO {
   @ApiProperty({
-    description: 'Reason for disapproval',
+    description: 'Reason for decline',
     example: 'Inappropriate content',
     required: false,
   })
