@@ -30,18 +30,11 @@ import { CaslUser, UserProxy } from '@modules/casl';
 import { DocumentSearchDTO } from './dto/document-search.dto';
 import { DocumentsPaginationDTO } from './dto/documents-pagination.dto';
 import { MyDocumentsPaginationDTO } from './dto/my-documents-pagination.dto';
-import { DeclineRequestDTO } from './dto/decline-request.dto';
 import ApiBaseResponses from '@decorators/api-base-response.decorator';
 import { FileBaseEntity } from './entities/file-base.entity';
 import Serialize from '@decorators/serialize.decorator';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { SkipThrottle } from '@nestjs/throttler';
-import { ApprovalRequestDTO } from './dto/approval-request.dto';
-import {
-  DOCUMENT_ALREADY_SUBMITTED,
-  DOCUMENT_NOT_FOUND,
-  REQUEST_NOT_FOUND,
-} from '@constants/errors.constants';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -131,60 +124,6 @@ export class DocumentController {
   @ApiResponse({ status: 404, description: 'Document not found' })
   async getDocumentById(@Param('documentId') documentId: string) {
     return this.documentService.getDocumentById(documentId);
-  }
-
-  @Post('/request')
-  @ApiOperation({ summary: 'Request a document to be added to a project' })
-  @ApiResponse({
-    status: 200,
-    description: 'Approval request sent successfully',
-  })
-  @ApiResponse({ status: 404, description: DOCUMENT_NOT_FOUND })
-  @ApiResponse({ status: 409, description: DOCUMENT_ALREADY_SUBMITTED })
-  async requestApproval(
-    @Body() approvalRequestDTO: ApprovalRequestDTO,
-
-    @CaslUser() userProxy?: UserProxy<User>,
-  ) {
-    const tokenUser = await userProxy.get();
-    return this.documentService.submitDocument(
-      approvalRequestDTO.documentId,
-      tokenUser.id,
-      approvalRequestDTO.projectId,
-    );
-  }
-
-  @Post('/request/:requestId/approve')
-  @ApiOperation({ summary: 'Approve a request to add a document to a project' })
-  @ApiResponse({ status: 200, description: 'Request approved successfully' })
-  @ApiResponse({ status: 404, description: REQUEST_NOT_FOUND })
-  async approveDocument(
-    @Param('requestId') requestId: string,
-    @CaslUser() userProxy?: UserProxy<User>,
-  ) {
-    const tokenUser = await userProxy.get();
-    return this.documentService.approveRequest(requestId, tokenUser.id);
-  }
-
-  @Post('/request/:requestId/decline')
-  @ApiOperation({ summary: 'Disapprove a request' })
-  @ApiResponse({
-    status: 200,
-    description: 'Request declined successfully',
-  })
-  @ApiResponse({ status: 404, description: REQUEST_NOT_FOUND })
-  async declineRequest(
-    @Param('requestId') requestId: string,
-    @Body() declineRequestDTO: DeclineRequestDTO,
-    @CaslUser() userProxy?: UserProxy<User>,
-  ) {
-    const tokenUser = await userProxy.get();
-    const { disapprovalReason } = declineRequestDTO;
-    return this.documentService.declineRequest(
-      requestId,
-      tokenUser.id,
-      disapprovalReason,
-    );
   }
 
   @Patch(':documentId/rename')

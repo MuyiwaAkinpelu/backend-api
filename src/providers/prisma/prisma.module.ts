@@ -12,7 +12,7 @@ import { DocumentElasticIndex } from '@modules/search/search-index/document.elas
 import { SearchService } from '@modules/search/search.service';
 import { DocumentService } from '@modules/files/document.service';
 import { FileRepository } from '@modules/files/file.repository';
-import { ApprovalRequestRepository } from '@modules/files/approval-request.repository';
+import { ApprovalRequestRepository } from '@modules/project/approval-request.repository';
 import { UserRepository } from '@modules/user/user.repository';
 import { ProjectRepository } from '@modules/project/project.repository';
 

@@ -88,6 +88,8 @@ export const ORGANIZATION_TYPE_TOURNAMENT =
 export const ORGANIZATION_NOT_VERIFIED = '400030: Organization is not verified';
 export const USER_NOT_VERIFIED = '400031: User is not verified';
 export const GAME_STATUS_INCOMPATIBLE = '400032: Game status is incompatible';
+export const APPROVAL_REQUEST_NOT_PENDING =
+  '400033: Approval request no longer pending';
 
 export const CONFLICT = '409000: Conflict';
 export const USER_CONFLICT =

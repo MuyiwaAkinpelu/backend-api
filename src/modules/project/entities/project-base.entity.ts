@@ -1,6 +1,6 @@
 import { Exclude, Expose } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import ProjectEntity from './project-entity';
+import ProjectEntity from './project.entity';
 import { ProjectCategory } from '@prisma/client';
 
 @Exclude()

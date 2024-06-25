@@ -115,7 +115,6 @@ model ApprovalRequest {
   disapprovedById  String?           @db.ObjectId
   disapprovedBy    User?             @relation("DisapprovedRequests", fields: [disapprovedById], references: [id])
 
-
   @@index([documentId, projectId])
 }
 

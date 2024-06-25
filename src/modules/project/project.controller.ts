@@ -20,7 +20,7 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
-import ProjectBaseEntity from './entities/project-base-entity';
+import ProjectBaseEntity from './entities/project-base.entity';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { CreateProjectDTO } from './dto/create-project.dto';
 import { UpdateProjectDTO } from './dto/update-project.dto';
