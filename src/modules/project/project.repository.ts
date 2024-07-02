@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@providers/prisma';
-import { Project, Prisma } from '@prisma/client';
+import { Project, Prisma, User } from '@prisma/client';
 import { paginator } from '@nodeteam/nestjs-prisma-pagination';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { PrismaRepositoryClient } from '@providers/prisma/types';
@@ -18,10 +18,12 @@ export class ProjectRepository {
 
   async findById(
     id: string,
+    include?: Prisma.ProjectInclude,
     transactionClient: PrismaRepositoryClient = this.prisma,
   ): Promise<Project | null> {
-    return transactionClient.project.findUnique({
+    return transactionClient.project.findFirst({
       where: { id },
+      include,
     });
   }
 
@@ -120,5 +122,21 @@ export class ProjectRepository {
     return transactionClient.project.delete({
       where: { id },
     });
+  }
+
+  async getProjectManagers(
+    projectId: string,
+    transactionClient: PrismaRepositoryClient = this.prisma,
+  ): Promise<User[]> {
+    const project = await transactionClient.project.findUnique({
+      where: { id: projectId },
+      include: { managers: true },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    return project.managers;
   }
 }

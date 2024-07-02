@@ -1,5 +1,5 @@
 const mockMailService = {
-  sendOTPConirmation: jest.fn(),
+  sendOTPConfirmation: jest.fn(),
 };
 
 export default mockMailService;

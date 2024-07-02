@@ -28,13 +28,13 @@ import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { File, User } from '@prisma/client';
 import { CaslUser, UserProxy } from '@modules/casl';
 import { DocumentSearchDTO } from './dto/document-search.dto';
-import { DocumentsPaginationDTO } from './dto/documents-pagination.dto';
-import { MyDocumentsPaginationDTO } from './dto/my-documents-pagination.dto';
 import ApiBaseResponses from '@decorators/api-base-response.decorator';
 import { FileBaseEntity } from './entities/file-base.entity';
 import Serialize from '@decorators/serialize.decorator';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { SkipThrottle } from '@nestjs/throttler';
+import { ListMyDocumentsDTO } from './dto/list-my-documents.dto';
+import { ListDocumentsDTO } from './dto/list-documents.dto';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -98,11 +98,11 @@ export class DocumentController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get documents with pagination' })
+  @ApiOperation({ summary: 'Get all documents with pagination' })
   @ApiResponse({ status: 200, description: 'Documents retrieved successfully' })
   // @Serialize(FileBaseEntity) TODO: Fix serializer
   async getDocuments(
-    @Query() paginationDTO: DocumentsPaginationDTO,
+    @Query() paginationDTO: ListDocumentsDTO,
   ): Promise<PaginatorTypes.PaginatedResult<File>> {
     return this.documentService.getDocuments(paginationDTO);
   }
@@ -111,7 +111,7 @@ export class DocumentController {
   @ApiOperation({ summary: 'Get your documents with pagination' })
   @ApiResponse({ status: 200, description: 'Documents retrieved successfully' })
   async getMyDocuments(
-    @Query() paginationDTO: MyDocumentsPaginationDTO,
+    @Query() paginationDTO: ListMyDocumentsDTO,
     @CaslUser() userProxy?: UserProxy<User>,
   ) {
     const tokenUser = await userProxy.get();

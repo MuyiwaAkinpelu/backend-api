@@ -156,30 +156,33 @@ export class ApprovalRequestService {
     }
 
     // Perform operations within a transaction
-    return this.prisma.$transaction(async (transactionClient) => {
-      // Update the approval request status
-      const updatedRequest = await this.approvalRequestRepository.update(
-        requestId,
-        {
-          status: ApprovalStatus.APPROVED,
-          approvedBy: {
-            connect: {
-              id: userId,
+    return this.prisma.$transaction(
+      async (transactionClient) => {
+        // Associate the document with the project
+        await this.projectRepository.addDocumentToProject(
+          request.projectId,
+          request.documentId,
+          transactionClient,
+        );
+
+        // Update the approval request status
+        const updatedRequest = await this.approvalRequestRepository.update(
+          requestId,
+          {
+            status: ApprovalStatus.APPROVED,
+            approvedBy: {
+              connect: {
+                id: userId,
+              },
             },
           },
-        },
-        transactionClient,
-      );
+          transactionClient,
+        );
 
-      // Associate the document with the project
-      await this.projectRepository.addDocumentToProject(
-        request.projectId,
-        request.documentId,
-        transactionClient,
-      );
-
-      return updatedRequest;
-    });
+        return updatedRequest;
+      },
+      { timeout: 20000 },
+    );
   }
 
   async declineRequest(

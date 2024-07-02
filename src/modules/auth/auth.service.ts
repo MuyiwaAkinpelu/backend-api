@@ -3,7 +3,6 @@ import {
   ConflictException,
   Injectable,
   Logger,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { SignUpDto } from './dto/sign-up.dto';
@@ -11,7 +10,6 @@ import { UserRepository } from '@modules/user/user.repository';
 import {
   INVALID_CREDENTIALS,
   MFA_PHONE_OR_TOKEN_REQUIRED,
-  NOT_FOUND,
   USER_CONFLICT,
 } from '@constants/errors.constants';
 import { TokenUseCase, User } from '@prisma/client';
@@ -66,8 +64,8 @@ export class AuthService {
     const testUser = await this.getUserByEmail(signInDto.email);
 
     if (!testUser) {
-      // 404001: User not found
-      throw new NotFoundException(NOT_FOUND);
+      // 401001: Invalid credentials
+      throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
     if (
@@ -91,7 +89,7 @@ export class AuthService {
       );
 
       // Send OTP via email
-      await this.mailService.sendOTPConirmation(testUser.email, {
+      await this.mailService.sendOTPConfirmation(testUser.email, {
         otp: otp.code,
       });
       Logger.debug(otp.code, 'OTP');

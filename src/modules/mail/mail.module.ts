@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import {
   MAIL_FROM,
   MAIL_HOST,
@@ -15,6 +15,7 @@ import { MailController } from './controllers/mail.controller';
 @Global() // 👈 global module
 @Module({
   imports: [
+    ConfigModule,
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({

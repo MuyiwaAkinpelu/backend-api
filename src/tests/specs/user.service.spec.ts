@@ -4,13 +4,13 @@ import { permissions } from '@modules/user/user.permissions';
 import { UserController } from '@modules/user/user.controller';
 import { UserService } from '@modules/user/user.service';
 import { UserRepository } from '@modules/user/user.repository';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import appConfig from '@config/app.config';
 import swaggerConfig from '@config/swagger.config';
 import jwtConfig from '@config/jwt.config';
 import s3Config from '@config/s3.config';
 import sqsConfig from '@config/sqs.config';
-import { User } from '@prisma/client';
+import { PrismaClient, User } from '@prisma/client';
 import { faker } from '@faker-js/faker';
 import { PrismaService } from '@providers/prisma';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
@@ -25,6 +25,8 @@ import { DocumentElasticIndex } from '@modules/search/search-index/document.elas
 import { SearchService } from '@modules/search/search.service';
 import { NotFoundException } from '@nestjs/common';
 import { USER_NOT_FOUND } from '@constants/errors.constants';
+import { MailService } from '@modules/mail/services/mail.service';
+import { MailModule } from '@modules/mail/mail.module';
 
 describe('UserService', () => {
   let userService: UserService;
@@ -35,11 +37,14 @@ describe('UserService', () => {
       imports: [
         CaslModule.forFeature({ permissions }),
         ConfigModule.forRoot({
+          isGlobal: true,
           load: [appConfig, swaggerConfig, jwtConfig, s3Config, sqsConfig],
         }),
+        MailModule,
       ],
       controllers: [UserController],
       providers: [
+        ConfigService,
         UserService,
         { provide: UserRepository, useValue: mockUserRepository },
         PrismaService,
@@ -49,6 +54,7 @@ describe('UserService', () => {
           provide: 'SearchServiceInterface',
           useClass: SearchService,
         },
+        PrismaClient,
       ],
     }).compile();
 

@@ -33,7 +33,7 @@ export class DocumentFiltersDTO {
   })
   @IsOptional()
   @IsEnum(DocumentVisibility)
-  visibility?: DocumentVisibility = DocumentVisibility.PRIVATE;
+  visibility?: DocumentVisibility;
 
   @ApiPropertyOptional({
     description: 'Filter files by approval status',

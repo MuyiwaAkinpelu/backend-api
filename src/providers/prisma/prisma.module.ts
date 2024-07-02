@@ -15,10 +15,14 @@ import { FileRepository } from '@modules/files/file.repository';
 import { ApprovalRequestRepository } from '@modules/project/approval-request.repository';
 import { UserRepository } from '@modules/user/user.repository';
 import { ProjectRepository } from '@modules/project/project.repository';
+import { MailService } from '@modules/mail/services/mail.service';
+import { MailModule } from '@modules/mail/mail.module';
+import { PrismaClient } from '@prisma/client';
 
 @Module({
   providers: [
     PrismaService,
+    PrismaClient,
     PrismaMiddleware,
     {
       provide: 'SearchServiceInterface',
@@ -30,9 +34,10 @@ import { ProjectRepository } from '@modules/project/project.repository';
     ProjectRepository,
     ApprovalRequestRepository,
     DocumentElasticIndex,
+    MailService,
   ],
   exports: [PrismaService],
-  imports: [SearchModule],
+  imports: [SearchModule, MailModule],
 })
 export class PrismaModule {
   static forRoot(options: PrismaModuleOptions = {}): DynamicModule {

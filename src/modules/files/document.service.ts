@@ -4,14 +4,13 @@ import { PrismaService } from '@providers/prisma';
 import { DocumentSearchObject } from '@modules/search/objects/document.search.object';
 import { SearchService } from '@modules/search/search.service';
 import { DocumentFiltersDTO } from './dto/document-filter.dto';
-import { DocumentsPaginationDTO } from './dto/documents-pagination.dto';
-import { MyDocumentsPaginationDTO } from './dto/my-documents-pagination.dto';
 import { FileRepository } from './file.repository';
 
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { ApprovalRequestRepository } from '../project/approval-request.repository';
 import { UserRepository } from '@modules/user/user.repository';
 import { ProjectRepository } from '@modules/project/project.repository';
+import { ListDocumentsDTO } from './dto/list-documents.dto';
 
 @Injectable()
 export class DocumentService {
@@ -64,9 +63,9 @@ export class DocumentService {
   }
 
   async getDocuments(
-    paginationDTO: DocumentsPaginationDTO,
+    paginationDTO: ListDocumentsDTO,
   ): Promise<PaginatorTypes.PaginatedResult<File>> {
-    const { page, limit, filters, sortBy, order } = paginationDTO;
+    const { page, limit, sortBy, order, ...filters } = paginationDTO;
 
     const where = this.buildWhereClause(filters);
     const include = {
@@ -106,44 +105,48 @@ export class DocumentService {
   }
 
   async getMyDocuments(
-    paginationDTO: MyDocumentsPaginationDTO,
+    paginationDTO: ListDocumentsDTO,
     userId: string,
-  ) {
-    const { page, limit, skip } = paginationDTO;
-    const documents = await this.prisma.file.findMany({
-      where: {
-        uploader: {
-          id: userId,
+  ): Promise<PaginatorTypes.PaginatedResult<File>> {
+    const { page, limit, sortBy, order, ...filters } = paginationDTO;
+
+    const where = this.buildWhereClause(filters);
+    where.uploaderId = userId;
+
+    const include = {
+      uploader: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatar: true,
         },
       },
-      take: limit,
-      skip,
-      include: {
-        uploader: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-          },
-        },
-        sharedWith: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-          },
+      sharedWith: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatar: true,
         },
       },
-    });
-    const totalDocuments = await this.prisma.file.count();
-    return {
-      data: documents,
-      page,
-      limit,
-      totalDocuments,
     };
+
+    const paginationOptions: PaginatorTypes.PaginateOptions = {
+      page,
+      perPage: limit,
+    };
+
+    const sortByColumn: Prisma.FileOrderByWithRelationInput = {
+      [sortBy]: order,
+    };
+
+    return this.fileRepository.findAll(
+      where,
+      include,
+      sortByColumn,
+      paginationOptions,
+    );
   }
 
   async setDocumentVisibilityToPublic(id: string) {
@@ -194,7 +197,11 @@ export class DocumentService {
         where.visibility = filters.visibility;
       }
       if (filters.approvalStatus !== undefined) {
-        where.approvalRequests.some.status = filters.approvalStatus;
+        where.approvalRequests = {
+          some: {
+            status: filters.approvalStatus,
+          },
+        };
       }
       if (filters.projectIDs) {
         where.projectsIDs = { hasSome: filters.projectIDs };

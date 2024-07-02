@@ -17,8 +17,7 @@ export class PrismaService
     Prisma.PrismaClientOptions,
     'query' | 'info' | 'warn' | 'error'
   >
-  implements OnModuleInit
-{
+  implements OnModuleInit {
   constructor(
     @Optional()
     @Inject(PRISMA_SERVICE_OPTIONS)
@@ -33,9 +32,12 @@ export class PrismaService
       );
     }
 
-    // Use the default middlewares
+    // file middlewares
     this.$use(this.prismaMiddleware.createFileMiddleware());
     this.$use(this.prismaMiddleware.updateFileMiddleware());
+    // approval request middlewares
+    this.$use(this.prismaMiddleware.onApprovalRequestCreate());
+    this.$use(this.prismaMiddleware.onApprovalRequestUpdate());
   }
 
   async onModuleInit() {

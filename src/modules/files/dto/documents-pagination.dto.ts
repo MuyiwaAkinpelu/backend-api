@@ -53,16 +53,6 @@ export class DocumentsPaginationDTO {
   @IsOptional()
   readonly limit?: number = 10;
 
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => DocumentFiltersDTO)
-  @ApiProperty({
-    description: 'Filters to apply to the file query',
-    type: DocumentFiltersDTO,
-    required: false,
-  })
-  filters?: DocumentFiltersDTO;
-
   get skip(): number {
     return (this.page - 1) * this.limit;
   }
