@@ -35,6 +35,7 @@ import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { SkipThrottle } from '@nestjs/throttler';
 import { ListMyDocumentsDTO } from './dto/list-my-documents.dto';
 import { ListDocumentsDTO } from './dto/list-documents.dto';
+import { CustomFileTypeValidator } from './validators/custom-filetype.validator';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -82,7 +83,19 @@ export class DocumentController {
       new ParseFilePipe({
         validators: [
           new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 4 }), //4mb
-          new FileTypeValidator({ fileType: '.(png|jpeg|jpg|pdf|doc)' }),
+          new CustomFileTypeValidator([
+            'image/png',
+            'image/jpeg',
+            'image/jpg',
+            'application/pdf',
+            'application/msword', // .doc
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+            'application/vnd.ms-powerpoint', // .ppt
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
+            'application/vnd.ms-excel', // .xls
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+            'text/plain', // .txt
+          ]),
         ],
       }),
     )

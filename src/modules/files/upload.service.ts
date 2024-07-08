@@ -139,6 +139,8 @@ export class UploadService {
           .then((data) => resolve(data))
           .catch((err) => reject(err));
       });
+    } else if (contentType === 'text/plain') {
+      return fileBuffer.toString('utf-8');
     }
     return '';
   }
