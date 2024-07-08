@@ -49,6 +49,10 @@ export class IndexService {
                   type: 'text',
                   analyzer: 'case_insensitive_analyzer',
                 },
+                content: {
+                  type: 'text',
+                  analyzer: 'case_insensitive_analyzer',
+                },
               },
             },
           },
