@@ -90,6 +90,7 @@ export const USER_NOT_VERIFIED = '400031: User is not verified';
 export const GAME_STATUS_INCOMPATIBLE = '400032: Game status is incompatible';
 export const APPROVAL_REQUEST_NOT_PENDING =
   '400033: Approval request no longer pending';
+export const UNSUPPORTED_FILE_TYPE = '400033: Unsupported file type';
 
 export const CONFLICT = '409000: Conflict';
 export const USER_CONFLICT =
