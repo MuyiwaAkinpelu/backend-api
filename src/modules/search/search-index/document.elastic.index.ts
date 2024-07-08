@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SearchServiceInterface } from '../interface/search.service.interface';
 import { documentIndex } from '../constant/document.elastic';
 import { File } from '@prisma/client';
+import { FileWithContent } from '@modules/files/types';
 // import { IndexService } from '../index.service';
 
 @Injectable()
@@ -13,16 +14,16 @@ export class DocumentElasticIndex {
     //this.indexService.createIndex(documentIndex._index); // Ensure index is created
   }
 
-  public async insertFileDocument(file: File): Promise<any> {
+  public async insertFileDocument(file: FileWithContent): Promise<any> {
     const data = this.fileDocument(file);
     return await this.searchService.insertIndex(data);
   }
 
-  public async deleteFileDocument(file: File): Promise<any> {
+  public async deleteFileDocument(file: FileWithContent): Promise<any> {
     return await this.deleteIndex(file.id);
   }
 
-  public async updateFileDocument(file: File): Promise<any> {
+  public async updateFileDocument(file: FileWithContent): Promise<any> {
     const data = this.fileDocument(file);
     await this.deleteIndex(file.id);
     return await this.searchService.insertIndex(data);

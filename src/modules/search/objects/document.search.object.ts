@@ -30,6 +30,7 @@ export class DocumentSearchObject {
                 'description',
                 'fileType',
                 'contentType',
+                'content',
               ],
             },
           },

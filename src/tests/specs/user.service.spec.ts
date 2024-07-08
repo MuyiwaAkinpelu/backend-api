@@ -25,8 +25,8 @@ import { DocumentElasticIndex } from '@modules/search/search-index/document.elas
 import { SearchService } from '@modules/search/search.service';
 import { NotFoundException } from '@nestjs/common';
 import { USER_NOT_FOUND } from '@constants/errors.constants';
-import { MailService } from '@modules/mail/services/mail.service';
 import { MailModule } from '@modules/mail/mail.module';
+import { UploadService } from '@modules/files/upload.service';
 
 describe('UserService', () => {
   let userService: UserService;
@@ -48,6 +48,7 @@ describe('UserService', () => {
         UserService,
         { provide: UserRepository, useValue: mockUserRepository },
         PrismaService,
+        UploadService,
         PrismaMiddleware,
         DocumentElasticIndex,
         {

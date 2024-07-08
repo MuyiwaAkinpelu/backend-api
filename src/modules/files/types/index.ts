@@ -1,3 +1,5 @@
+import { File } from '@prisma/client';
+
 export interface SaveFileToDBParams {
   fileName: string;
   originalFilename: string;
@@ -6,4 +8,8 @@ export interface SaveFileToDBParams {
   size: number;
   tags?: string[];
   uploaderId: string;
+}
+
+export interface FileWithContent extends File {
+  content?: string;
 }
