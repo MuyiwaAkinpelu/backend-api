@@ -18,6 +18,7 @@ import { ProjectRepository } from '@modules/project/project.repository';
 import { MailService } from '@modules/mail/services/mail.service';
 import { MailModule } from '@modules/mail/mail.module';
 import { PrismaClient } from '@prisma/client';
+import { UploadService } from '@modules/files/upload.service';
 
 @Module({
   providers: [
@@ -35,6 +36,7 @@ import { PrismaClient } from '@prisma/client';
     ApprovalRequestRepository,
     DocumentElasticIndex,
     MailService,
+    UploadService,
   ],
   exports: [PrismaService],
   imports: [SearchModule, MailModule],

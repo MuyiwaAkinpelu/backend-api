@@ -5,9 +5,10 @@ import {
   Prisma,
   PrismaClient,
 } from '@prisma/client';
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, forwardRef } from '@nestjs/common';
 import { DocumentElasticIndex } from '@modules/search/search-index/document.elastic.index';
 import { MailService } from '@modules/mail/services/mail.service';
+import { UploadService } from '@modules/files/upload.service';
 
 @Injectable()
 export class PrismaMiddleware {
@@ -15,6 +16,8 @@ export class PrismaMiddleware {
   constructor(
     @Inject(DocumentElasticIndex)
     private readonly documentESIndex: DocumentElasticIndex,
+    @Inject(forwardRef(() => UploadService))
+    private readonly uploadService: UploadService,
     private readonly prisma: PrismaClient,
     private readonly mailService: MailService,
   ) {
@@ -27,7 +30,14 @@ export class PrismaMiddleware {
 
       if (params.model === 'File' && params.action === 'create') {
         try {
-          await this.documentESIndex.insertFileDocument(result);
+          const content = await this.uploadService.extractTextFromFile(
+            result.filename,
+            result.contentType,
+          );
+          await this.documentESIndex.insertFileDocument({
+            ...result,
+            content,
+          });
         } catch (error) {
           this.logger.error(error);
         }
@@ -43,7 +53,14 @@ export class PrismaMiddleware {
 
       if (params.model === 'File' && params.action === 'update') {
         try {
-          await this.documentESIndex.updateFileDocument(result);
+          const content = await this.uploadService.extractTextFromFile(
+            result.filename,
+            result.contentType,
+          );
+          await this.documentESIndex.updateFileDocument({
+            ...result,
+            content,
+          });
         } catch (error) {
           this.logger.error(error);
         }

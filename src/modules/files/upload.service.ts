@@ -1,16 +1,17 @@
-import { S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import {
   AWS_S3_BUCKET,
   AWS_S3_REGION,
   AWS_S3_ENDPOINT,
 } from '@constants/env.constants';
-import { Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@providers/prisma';
 import { SaveFileToDBParams } from './types';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import * as officeParser from 'officeparser';
 
 @Injectable()
 export class UploadService {
@@ -19,6 +20,7 @@ export class UploadService {
 
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
+    @Inject(forwardRef(() => PrismaService))
     private readonly prisma: PrismaService,
   ) {
     this.s3Client = new S3Client({
@@ -112,5 +114,43 @@ export class UploadService {
     });
 
     return savedFile;
+  }
+
+  async extractTextFromFile(
+    filePath: string,
+    contentType: string,
+  ): Promise<string> {
+    const fileBuffer = await this.getFileBuffer(filePath);
+
+    if (
+      [
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.oasis.opendocument.text',
+        'application/vnd.oasis.opendocument.presentation',
+        'application/vnd.oasis.opendocument.spreadsheet',
+        'application/pdf',
+      ].includes(contentType)
+    ) {
+      return new Promise((resolve, reject) => {
+        officeParser
+          .parseOfficeAsync(fileBuffer)
+          .then((data) => resolve(data))
+          .catch((err) => reject(err));
+      });
+    }
+    return '';
+  }
+
+  async getFileBuffer(filePath: string): Promise<Buffer> {
+    const getObjectCommand = new GetObjectCommand({
+      Bucket: this.configService.getOrThrow(AWS_S3_BUCKET),
+      Key: filePath,
+    });
+
+    const response = await this.s3Client.send(getObjectCommand);
+    const str = await response.Body.transformToByteArray();
+    return Buffer.from(str);
   }
 }
