@@ -5,6 +5,8 @@ import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { PROJECT_NOT_FOUND } from '@constants/errors.constants';
 import { ProjectFiltersDTO } from './dto/project-filters.dto';
 import { ListProjectsDTO } from './dto/projects.dto';
+import { CreateProjectDTO } from './dto/create-project.dto';
+import { UpdateProjectDTO } from './dto/update-project.dto';
 
 @Injectable()
 export class ProjectService {
@@ -64,12 +66,76 @@ export class ProjectService {
     );
   }
 
-  async create(data: Prisma.ProjectCreateInput): Promise<Project> {
-    return this.projectRepository.create(data);
+  async create(data: CreateProjectDTO): Promise<Project> {
+    let projectData: Prisma.ProjectCreateInput = {
+      ...data,
+    };
+
+    if (data.projectManagersIDs) {
+      const managersIds = data.projectManagersIDs.map((managerId) => {
+        return {
+          id: managerId,
+        };
+      });
+      projectData = {
+        ...projectData,
+        managers: {
+          connect: managersIds,
+        },
+      };
+
+      if (data.projectMembersIDs) {
+        const membersIds = data.projectMembersIDs.map((memberId) => {
+          return {
+            id: memberId,
+          };
+        });
+        projectData = {
+          ...projectData,
+          members: {
+            connect: membersIds,
+          },
+        };
+      }
+
+      return this.projectRepository.create(projectData);
+    }
   }
 
-  async update(id: string, data: Prisma.ProjectUpdateInput): Promise<Project> {
-    return this.projectRepository.updateProject(id, data);
+  async update(id: string, data: UpdateProjectDTO): Promise<Project> {
+    let projectData: Prisma.ProjectUpdateInput = {
+      ...data,
+    };
+
+    if (data.projectManagersIDs) {
+      const managersIds = data.projectManagersIDs.map((managerId) => {
+        return {
+          id: managerId,
+        };
+      });
+      projectData = {
+        ...projectData,
+        managers: {
+          connect: managersIds,
+        },
+      };
+
+      if (data.projectMembersIDs) {
+        const membersIds = data.projectMembersIDs.map((memberId) => {
+          return {
+            id: memberId,
+          };
+        });
+        projectData = {
+          ...projectData,
+          members: {
+            connect: membersIds,
+          },
+        };
+      }
+
+      return this.projectRepository.updateProject(id, projectData);
+    }
   }
 
   async delete(id: string): Promise<Project> {
