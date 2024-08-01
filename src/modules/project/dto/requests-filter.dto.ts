@@ -1,8 +1,13 @@
 import { IsOptional, IsString, IsDateString, IsEnum } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ApprovalStatus } from '@prisma/client';
+import { ApprovalStatus, ProjectCategory } from '@prisma/client';
 
 export class RequestsFiltersDTO {
+  @ApiPropertyOptional({ enum: ProjectCategory })
+  @IsOptional()
+  @IsEnum(ProjectCategory)
+  category?: ProjectCategory;
+
   @IsOptional()
   @IsString()
   @ApiPropertyOptional({
@@ -73,4 +78,12 @@ export class RequestsFiltersDTO {
     required: false,
   })
   createdBefore?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({
+    description: 'Search query to filter by project name or document name',
+    required: false,
+  })
+  search?: string;
 }

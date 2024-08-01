@@ -313,6 +313,43 @@ export class ApprovalRequestService {
       if (filters.createdBefore) {
         where.createdAt = { lte: new Date(filters.createdBefore) };
       }
+      if (filters.category) {
+        where.project.category = filters.category;
+      }
+
+      // Apply search filter
+      if (filters.search) {
+        where.OR = [
+          {
+            document: {
+              originalFilename: {
+                contains: filters.search,
+                mode: 'insensitive',
+              },
+            },
+          },
+          {
+            project: {
+              name: { contains: filters.search, mode: 'insensitive' },
+            },
+          },
+          {
+            submittedBy: {
+              OR: [
+                {
+                  firstName: { contains: filters.search, mode: 'insensitive' },
+                },
+                {
+                  lastName: { contains: filters.search, mode: 'insensitive' },
+                },
+                {
+                  email: { contains: filters.search, mode: 'insensitive' },
+                },
+              ],
+            },
+          },
+        ];
+      }
     }
 
     return where;
