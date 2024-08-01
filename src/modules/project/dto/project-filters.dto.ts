@@ -14,7 +14,7 @@ export class ProjectFiltersDTO {
   @ApiPropertyOptional({ enum: ProjectCategory })
   @IsOptional()
   @IsEnum(ProjectCategory)
-  category?: ProjectCategory = ProjectCategory.SCIDAR;
+  category?: ProjectCategory;
 
   @IsOptional()
   @IsString()

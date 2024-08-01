@@ -41,7 +41,6 @@ export class UpdateProjectDTO {
   })
   @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
   @IsString({ each: true })
   tags?: string[];
 
@@ -52,7 +51,6 @@ export class UpdateProjectDTO {
   })
   @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
   @IsString({ each: true })
   projectMembersIDs?: string[];
 
@@ -63,7 +61,6 @@ export class UpdateProjectDTO {
   })
   @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
   @IsString({ each: true })
   projectManagersIDs?: string[];
 }
