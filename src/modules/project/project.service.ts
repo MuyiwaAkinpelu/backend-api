@@ -67,75 +67,49 @@ export class ProjectService {
   }
 
   async create(data: CreateProjectDTO): Promise<Project> {
-    let projectData: Prisma.ProjectCreateInput = {
-      ...data,
+    const { projectManagersIDs, projectMembersIDs, ...rest } = data;
+
+    const projectData: Prisma.ProjectCreateInput = {
+      ...rest,
+      managers: {
+        connect:
+          projectManagersIDs?.map((managerId) => ({
+            id: managerId,
+          })) || [],
+      },
+      members: {
+        connect:
+          projectMembersIDs?.map((memberId) => ({
+            id: memberId,
+          })) || [],
+      },
     };
 
-    if (data.projectManagersIDs) {
-      const managersIds = data.projectManagersIDs.map((managerId) => {
-        return {
-          id: managerId,
-        };
-      });
-      projectData = {
-        ...projectData,
-        managers: {
-          connect: managersIds,
-        },
-      };
-
-      if (data.projectMembersIDs) {
-        const membersIds = data.projectMembersIDs.map((memberId) => {
-          return {
-            id: memberId,
-          };
-        });
-        projectData = {
-          ...projectData,
-          members: {
-            connect: membersIds,
-          },
-        };
-      }
-
-      return this.projectRepository.create(projectData);
-    }
+    return this.projectRepository.create(projectData);
   }
 
   async update(id: string, data: UpdateProjectDTO): Promise<Project> {
-    let projectData: Prisma.ProjectUpdateInput = {
-      ...data,
+    const { projectManagersIDs, projectMembersIDs, ...rest } = data;
+
+    const projectData: Prisma.ProjectUpdateInput = {
+      ...rest,
+      ...(projectManagersIDs && {
+        managers: {
+          set: projectManagersIDs.map((managerId) => ({
+            id: managerId,
+          })),
+        },
+      }),
+      ...(projectMembersIDs && {
+        members: {
+          set: projectMembersIDs.map((memberId) => ({
+            id: memberId,
+          })),
+        },
+      }),
     };
 
-    if (data.projectManagersIDs) {
-      const managersIds = data.projectManagersIDs.map((managerId) => {
-        return {
-          id: managerId,
-        };
-      });
-      projectData = {
-        ...projectData,
-        managers: {
-          connect: managersIds,
-        },
-      };
-
-      if (data.projectMembersIDs) {
-        const membersIds = data.projectMembersIDs.map((memberId) => {
-          return {
-            id: memberId,
-          };
-        });
-        projectData = {
-          ...projectData,
-          members: {
-            connect: membersIds,
-          },
-        };
-      }
-
-      return this.projectRepository.updateProject(id, projectData);
-    }
+    return this.projectRepository.updateProject(id, projectData);
   }
 
   async delete(id: string): Promise<Project> {
