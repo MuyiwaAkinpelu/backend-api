@@ -113,7 +113,7 @@ export class DocumentService {
     const where = this.buildWhereClause(filters);
     where.uploaderId = userId;
 
-    const include = {
+    const include: Prisma.FileInclude = {
       uploader: {
         select: {
           id: true,
@@ -128,6 +128,15 @@ export class DocumentService {
           firstName: true,
           lastName: true,
           avatar: true,
+        },
+      },
+      approvalRequests: {
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          projectId: true,
         },
       },
     };
@@ -177,9 +186,18 @@ export class DocumentService {
   }
 
   async deleteDocument(id: string) {
-    const document = await this.getDocumentById(id);
-    // Implement deletion logic (e.g., delete the file from storage)
-    await this.prisma.file.delete({ where: { id } });
+    await this.getDocumentById(id);
+    await this.prisma.$transaction(async (prisma) => {
+      // Delete related approval requests first
+      await prisma.approvalRequest.deleteMany({
+        where: { documentId: id },
+      });
+
+      // Now delete the document
+      await prisma.file.delete({
+        where: { id },
+      });
+    });
     return { message: 'Document deleted successfully' };
   }
 

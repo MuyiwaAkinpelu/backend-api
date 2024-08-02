@@ -27,8 +27,8 @@ model User {
   filesShared   File[]   @relation(fields: [fileSharedIDs], references: [id])
 
   submittedRequests    ApprovalRequest[] @relation("SubmittedRequests")
-  documentsApproved    ApprovalRequest[]            @relation("ApprovedRequests")
-  documentsDisapproved ApprovalRequest[]            @relation("DisapprovedRequests")
+  documentsApproved    ApprovalRequest[] @relation("ApprovedRequests")
+  documentsDisapproved ApprovalRequest[] @relation("DisapprovedRequests")
 
   createdProjects Project[] @relation("ProjectCreatedBy")
   updatedProjects Project[] @relation("ProjectUpdatedBy")
@@ -80,18 +80,18 @@ model File {
   uploader   User   @relation(fields: [uploaderId], references: [id], "UploadedDocuments")
   uploaderId String @db.ObjectId
 
-  visibility        DocumentVisibility     @default(PRIVATE)
-  size              Int // File size in bytes
-  fileType          String? // Type of file (e.g., image, document)
-  uploadDate        DateTime               @default(now()) // Date when the file was uploaded
-  description       String?
-  tags              String[] // Tags or keywords associated with the file
-  originalFilename  String // Original filename of the uploaded file
-  contentType       String // MIME type of the file
+  visibility       DocumentVisibility @default(PRIVATE)
+  size             Int // File size in bytes
+  fileType         String? // Type of file (e.g., image, document)
+  uploadDate       DateTime           @default(now()) // Date when the file was uploaded
+  description      String?
+  tags             String[] // Tags or keywords associated with the file
+  originalFilename String // Original filename of the uploaded file
+  contentType      String // MIME type of the file
 
   approvalRequests ApprovalRequest[]
-  sharedWithIDs String[] @db.ObjectId
-  sharedWith    User[]   @relation(fields: [sharedWithIDs], references: [id])
+  sharedWithIDs    String[]          @db.ObjectId
+  sharedWith       User[]            @relation(fields: [sharedWithIDs], references: [id])
 
   projectsIDs String[]  @db.ObjectId
   projects    Project[] @relation("ProjectDocuments", fields: [projectsIDs], references: [id])
@@ -103,17 +103,17 @@ model ApprovalRequest {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   documentId    String         @db.ObjectId
-  document      File           @relation(fields: [documentId], references: [id])
+  document      File           @relation(fields: [documentId], references: [id], onDelete: Cascade)
   projectId     String         @db.ObjectId
   project       Project        @relation(fields: [projectId], references: [id])
   submittedById String?        @db.ObjectId
   submittedBy   User?          @relation("SubmittedRequests", fields: [submittedById], references: [id])
 
   disapprovalReason String? // Reason for disapproval, if applicable
-  approvedById     String?           @db.ObjectId
-  approvedBy       User?             @relation("ApprovedRequests", fields: [approvedById], references: [id])
-  disapprovedById  String?           @db.ObjectId
-  disapprovedBy    User?             @relation("DisapprovedRequests", fields: [disapprovedById], references: [id])
+  approvedById      String? @db.ObjectId
+  approvedBy        User?   @relation("ApprovedRequests", fields: [approvedById], references: [id])
+  disapprovedById   String? @db.ObjectId
+  disapprovedBy     User?   @relation("DisapprovedRequests", fields: [disapprovedById], references: [id])
 
   @@index([documentId, projectId])
 }
