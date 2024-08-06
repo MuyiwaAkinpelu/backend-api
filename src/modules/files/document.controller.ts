@@ -36,6 +36,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { ListMyDocumentsDTO } from './dto/list-my-documents.dto';
 import { ListDocumentsDTO } from './dto/list-documents.dto';
 import { CustomFileTypeValidator } from './validators/custom-filetype.validator';
+import { RenameDocumentDto } from './dto/rename-document.dto';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -145,9 +146,10 @@ export class DocumentController {
   @ApiResponse({ status: 404, description: 'Document not found' })
   async renameDocument(
     @Param('documentId') documentId: string,
-    @Body() newName: string,
+    @Body() renameDocumentDto: RenameDocumentDto,
   ) {
-    return this.documentService.renameDocument(documentId, newName);
+    const { originalFilename } = renameDocumentDto;
+    return this.documentService.renameDocument(documentId, originalFilename);
   }
 
   @Patch(':documentId/public')
