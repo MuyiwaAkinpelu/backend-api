@@ -180,7 +180,7 @@ export class DocumentService {
     const document = await this.getDocumentById(id);
     const renamedDocument = await this.prisma.file.update({
       where: { id },
-      data: { filename: newName },
+      data: { originalFilename: newName },
     });
     return renamedDocument;
   }
