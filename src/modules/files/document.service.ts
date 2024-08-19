@@ -85,6 +85,7 @@ export class DocumentService {
           avatar: true,
         },
       },
+      projects: true,
     };
 
     const paginationOptions: PaginatorTypes.PaginateOptions = {
@@ -139,6 +140,7 @@ export class DocumentService {
           projectId: true,
         },
       },
+      projects: true,
     };
 
     const paginationOptions: PaginatorTypes.PaginateOptions = {
