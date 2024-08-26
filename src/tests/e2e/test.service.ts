@@ -76,7 +76,10 @@ class TestService {
       email: faker.internet.email(),
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
+      phone: faker.phone.number(),
       password: faker.internet.password({ length: 12 }),
+      department: 'Audit',
+      designation: 'Principal',
       roles: [Roles.GUEST],
     };
   }

@@ -23,6 +23,9 @@ export default (ctx: DefaultContext) => {
       firstName: user.firstName,
       lastName: user.lastName,
       roles: [Roles.GUEST],
+      phone: user.phone,
+      department: user.department,
+      designation: user.designation,
     };
 
     return ctx.request.post(AUTH_SIGN_UP).send(busyEmailDto).expect(409);

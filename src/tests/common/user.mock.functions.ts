@@ -10,6 +10,9 @@ export function getSignUpData(email?: string): SignUpDto {
     email: faker.internet.email({ provider: email }),
     firstName: faker.person.firstName(),
     lastName: faker.person.lastName(),
+    phone: faker.phone.number(),
+    department: 'Finance',
+    designation: 'Principal',
     password: faker.internet.password({ length: 12 }),
     roles: [Roles.GUEST],
   };

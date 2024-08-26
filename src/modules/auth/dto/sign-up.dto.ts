@@ -6,6 +6,8 @@ import {
   Matches,
   IsEnum,
   ArrayUnique,
+  IsPhoneNumber,
+  IsOptional,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Roles } from '@modules/app/app.roles';
@@ -26,6 +28,15 @@ export class SignUpDto {
   @IsNotEmpty()
   readonly lastName!: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    example: '+2348030300003',
+    description: 'Phone number',
+  })
+  @IsPhoneNumber()
+  @IsNotEmpty()
+  readonly phone: string;
+
   @ApiProperty({ type: String, default: 'string!12345' })
   @IsString()
   @Length(6, 20)
@@ -45,4 +56,14 @@ export class SignUpDto {
   @IsEnum(Roles, { each: true })
   @ArrayUnique()
   readonly roles!: Roles[];
+
+  @ApiPropertyOptional({ type: String, example: 'Audit' })
+  @IsString()
+  @IsOptional()
+  readonly department: string;
+
+  @ApiPropertyOptional({ type: String, example: 'Principal' })
+  @IsString()
+  @IsOptional()
+  readonly designation: string;
 }
