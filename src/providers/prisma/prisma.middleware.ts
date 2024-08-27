@@ -115,7 +115,7 @@ export class PrismaMiddleware {
             managerEmails,
             {
               projectName: project.name,
-              documentName: document.filename,
+              documentName: document.originalFilename,
               requestedBy: `${submittedBy.firstName} ${submittedBy.lastName}`,
               submissionDate: new Date().toISOString(),
               reviewLink: `https://drs.scidar.org/projects/${project.id}/requests/${result.id}/review`,
@@ -156,7 +156,7 @@ export class PrismaMiddleware {
           if (document && submittedBy) {
             try {
               this.mailService.sendApprovalNotification(submittedBy.email, {
-                documentName: document.filename,
+                documentName: document.originalFilename,
                 approvalDate: new Date().toISOString(),
                 requestedBy: `${submittedBy.firstName} ${submittedBy.lastName}`,
                 projectLink: `https://drs.scidar.org/projects/${project.id}`,

@@ -8,18 +8,20 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  email      String   @unique
-  phone      String?
-  firstName  String?
-  lastName   String?
-  password   String
-  avatar     String?
-  roles      Roles[]  @default([GUEST])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now())
-  isVerified Boolean? @default(false)
-  isActive   Boolean? @default(false)
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  email       String   @unique
+  phone       String?
+  firstName   String?
+  lastName    String?
+  password    String
+  avatar      String?
+  roles       Roles[]  @default([GUEST])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+  isVerified  Boolean? @default(false)
+  isActive    Boolean? @default(false)
+  department  String?
+  designation String?
 
   filesUploaded File[] @relation("UploadedDocuments") // files you uploaded
 
@@ -77,8 +79,8 @@ model File {
   filename String?
   path     String
 
-  uploader   User   @relation(fields: [uploaderId], references: [id], "UploadedDocuments")
-  uploaderId String @db.ObjectId
+  uploader   User?   @relation(fields: [uploaderId], references: [id], "UploadedDocuments", onDelete: SetNull)
+  uploaderId String? @db.ObjectId
 
   visibility       DocumentVisibility @default(PRIVATE)
   size             Int // File size in bytes

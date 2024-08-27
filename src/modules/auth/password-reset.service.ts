@@ -32,7 +32,7 @@ export class PasswordResetService {
       TokenType.HEX,
     );
 
-    const link = `${this.clientURL}/passwordReset?token=${token.code}&id=${user.id}`;
+    const link = `${this.clientURL}/reset-password/${token.code}/?u=${user.id}`;
     console.log(link);
 
     // Send the OTP to the user's email
