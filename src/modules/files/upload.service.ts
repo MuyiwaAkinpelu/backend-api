@@ -33,57 +33,68 @@ export class UploadService {
         : 'https://scidar-drs-uploads.s3.amazonaws.com';
   }
 
-  async upload(file: Express.Multer.File, tags: string[], uploaderId: string) {
+  async upload(
+    files: Express.Multer.File[], // Updated to handle multiple files
+    tags: string[],
+    uploaderId: string,
+  ) {
     try {
-      // create custom name for the file
-      const uniqueSuffix = `${uuidv4()}-${Date.now()}`;
-      console.log(file.originalname);
-      const extension = path.extname(file.originalname);
-      const customFileName = `${uniqueSuffix}${extension}`;
+      const uploadedFiles = [];
 
-      const parallelUploads3 = new Upload({
-        client: this.s3Client,
-        params: {
-          Bucket: 'scidar-drs-uploads',
-          Key: customFileName,
-          Body: file.buffer,
-          ACL: 'public-read',
-          ContentType: file.mimetype,
-          ContentDisposition: 'inline',
-        },
+      for (const file of files) {
+        // Create a unique name for the file
+        const uniqueSuffix = `${uuidv4()}-${Date.now()}`;
+        const extension = path.extname(file.originalname);
+        const customFileName = `${uniqueSuffix}${extension}`;
 
-        tags: [
-          /*...*/
-        ], // optional tags
-        queueSize: 4, // optional concurrency configuration
-        partSize: 1024 * 1024 * 5, // optional size of each part, in bytes, at least 5MB
-        leavePartsOnError: false, // optional manually handle dropped parts
-      });
+        const parallelUploads3 = new Upload({
+          client: this.s3Client,
+          params: {
+            Bucket: 'scidar-drs-uploads',
+            Key: customFileName,
+            Body: file.buffer,
+            ACL: 'public-read',
+            ContentType: file.mimetype,
+            ContentDisposition: 'inline',
+          },
+          tags: [
+            // Optional tags
+            { Key: 'uploaderId', Value: uploaderId },
+            ...tags.map((tag) => ({ Key: 'tag', Value: tag })),
+          ],
+          queueSize: 4, // Optional concurrency configuration
+          partSize: 1024 * 1024 * 5, // Optional size of each part, in bytes, at least 5MB
+          leavePartsOnError: false, // Optional manually handle dropped parts
+        });
 
-      parallelUploads3.on('httpUploadProgress', (progress) => {
-        console.log(progress);
-      });
+        parallelUploads3.on('httpUploadProgress', (progress) => {
+          console.log(progress);
+        });
 
-      await parallelUploads3.done();
+        await parallelUploads3.done();
 
-      // Generate the URL for accessing the uploaded file
-      const fileUrl = `${this.bucketUrl}/${customFileName}`;
+        // Generate the URL for accessing the uploaded file
+        const fileUrl = `${this.bucketUrl}/${customFileName}`;
 
-      // Save file details to the database
-      const savedFile = await this.saveFileToDatabase({
-        fileName: customFileName,
-        originalFilename: file.originalname,
-        fileUrl,
-        contentType: file.mimetype,
-        size: file.size,
-        tags,
-        uploaderId,
-      });
+        // Save file details to the database
+        const savedFile = await this.saveFileToDatabase({
+          fileName: customFileName,
+          originalFilename: file.originalname,
+          fileUrl,
+          contentType: file.mimetype,
+          size: file.size,
+          tags,
+          uploaderId,
+        });
 
-      // Return the details of the uploaded file
-      return savedFile;
+        uploadedFiles.push(savedFile);
+      }
+
+      // Return the details of the uploaded files
+      return uploadedFiles;
     } catch (e) {
       console.log(e);
+      throw e; // Consider re-throwing the error to handle it at a higher level
     }
   }
 

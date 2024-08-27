@@ -138,6 +138,24 @@ export class DocumentService {
           createdAt: true,
           updatedAt: true,
           projectId: true,
+          approvedBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+          disapprovedBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+          project: {
+            select: {
+              managers: true,
+              name: true,
+            },
+          },
         },
       },
       projects: true,
