@@ -15,6 +15,7 @@ import {
   ParseArrayPipe,
   DefaultValuePipe,
   UploadedFiles,
+  Res,
 } from '@nestjs/common';
 import {
   ApiExtraModels,
@@ -187,5 +188,45 @@ export class DocumentController {
   @ApiResponse({ status: 404, description: 'Document not found' })
   async deleteDocument(@Param('documentId') documentId: string) {
     return this.documentService.deleteDocument(documentId);
+  }
+
+  @Get('download/:documentId')
+  @ApiOperation({ summary: 'Download a document by ID' })
+  @ApiResponse({ status: 200, description: 'Document downloaded successfully' })
+  @ApiResponse({ status: 404, description: 'Document not found' })
+  async downloadDocument(@Param('documentId') documentId: string, @Res() res) {
+    const document = await this.documentService.getDocumentById(documentId);
+
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    const fileStream = await this.uploadService.downloadFile(document.filename);
+
+    res.set({
+      'Content-Type': document.contentType,
+      'Content-Disposition': `attachment; filename="${document.originalFilename}"`,
+    });
+    fileStream.pipe(res);
+  }
+
+  @Get('preview/:documentId')
+  @ApiOperation({ summary: 'Download a document by ID' })
+  @ApiResponse({ status: 200, description: 'Document previewed successfully' })
+  @ApiResponse({ status: 404, description: 'Document not found' })
+  async previewDocument(@Param('documentId') documentId: string, @Res() res) {
+    const document = await this.documentService.getDocumentById(documentId);
+
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    const fileStream = await this.uploadService.downloadFile(document.filename);
+
+    res.set({
+      'Content-Type': document.contentType,
+      'Content-Disposition': `inline; filename="${document.originalFilename}"`,
+    });
+    fileStream.pipe(res);
   }
 }

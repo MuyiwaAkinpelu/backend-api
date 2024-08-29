@@ -6,6 +6,7 @@ import {
   IsDateString,
   ArrayNotEmpty,
   IsEnum,
+  ValidateIf,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ApprovalStatus, DocumentVisibility } from '@prisma/client';
@@ -118,7 +119,7 @@ export class DocumentFiltersDTO {
   })
   originalFilename?: string;
 
-  @IsOptional()
+  @ValidateIf((obj) => obj.sharedWithIDs && obj.sharedWithIDs.length > 0)
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
@@ -129,9 +130,8 @@ export class DocumentFiltersDTO {
   })
   sharedWithIDs?: string[];
 
-  @IsOptional()
+  @ValidateIf((obj) => obj.projectIDs && obj.projectIDs.length > 0)
   @IsArray()
-  @ArrayNotEmpty()
   @IsString({ each: true })
   @ApiPropertyOptional({
     description: 'Filter files approved in specific project IDs',

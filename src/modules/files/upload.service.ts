@@ -12,6 +12,7 @@ import { SaveFileToDBParams } from './types';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as officeParser from 'officeparser';
+import { Readable } from 'stream';
 
 @Injectable()
 export class UploadService {
@@ -165,5 +166,16 @@ export class UploadService {
     const response = await this.s3Client.send(getObjectCommand);
     const str = await response.Body.transformToByteArray();
     return Buffer.from(str);
+  }
+
+  async downloadFile(fileName: string): Promise<Readable> {
+    const getObjectCommand = new GetObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: fileName,
+    });
+
+    const response = await this.s3Client.send(getObjectCommand);
+
+    return response.Body as Readable;
   }
 }
