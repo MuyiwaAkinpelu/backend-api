@@ -68,7 +68,7 @@ export class DocumentService {
     const { page, limit, sortBy, order, ...filters } = paginationDTO;
 
     const where = this.buildWhereClause(filters);
-    const include = {
+    const include: Prisma.FileInclude = {
       uploader: {
         select: {
           id: true,
@@ -83,6 +83,33 @@ export class DocumentService {
           firstName: true,
           lastName: true,
           avatar: true,
+        },
+      },
+      approvalRequests: {
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+          projectId: true,
+          approvedBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+          disapprovedBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+          project: {
+            select: {
+              managers: true,
+              name: true,
+            },
+          },
         },
       },
       projects: true,
@@ -138,6 +165,24 @@ export class DocumentService {
           createdAt: true,
           updatedAt: true,
           projectId: true,
+          approvedBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+          disapprovedBy: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+          project: {
+            select: {
+              managers: true,
+              name: true,
+            },
+          },
         },
       },
       projects: true,
@@ -270,7 +315,9 @@ export class DocumentService {
       // Apply search filter
       if (filters.search) {
         where.OR = [
-          { filename: { contains: filters.search, mode: 'insensitive' } },
+          {
+            originalFilename: { contains: filters.search, mode: 'insensitive' },
+          },
           {
             uploader: {
               firstName: { contains: filters.search, mode: 'insensitive' },

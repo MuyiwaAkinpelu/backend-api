@@ -12,8 +12,10 @@ import {
   Post,
   UploadedFile,
   UseInterceptors,
-  Put,
   ParseArrayPipe,
+  DefaultValuePipe,
+  UploadedFiles,
+  Res,
 } from '@nestjs/common';
 import {
   ApiExtraModels,
@@ -23,7 +25,7 @@ import {
 } from '@nestjs/swagger';
 import { DocumentService } from './document.service';
 import { UploadService } from './upload.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { File, User } from '@prisma/client';
 import { CaslUser, UserProxy } from '@modules/casl';
@@ -58,8 +60,8 @@ export class DocumentController {
   }
 
   @Post('upload')
-  @ApiOperation({ summary: 'Upload a document' })
-  @ApiResponse({ status: 201, description: 'Document uploaded successfully' })
+  @ApiOperation({ summary: 'Upload documents' })
+  @ApiResponse({ status: 201, description: 'Documents uploaded successfully' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -69,21 +71,25 @@ export class DocumentController {
           type: 'array',
           items: { type: 'string' },
           default: [],
+          nullable: true,
         },
-        file: {
-          type: 'string',
-          format: 'binary',
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
         },
       },
     },
   })
   @SkipThrottle({ default: false })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('files'))
   async uploadFile(
-    @UploadedFile(
+    @UploadedFiles(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 4 }), //4mb
+          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), //10mb
           new CustomFileTypeValidator([
             'image/png',
             'image/jpeg',
@@ -100,15 +106,15 @@ export class DocumentController {
         ],
       }),
     )
-    file: Express.Multer.File,
-    @Body('tags', ParseArrayPipe) tags: string[],
+    files: Express.Multer.File[],
+    @Body('tags', new DefaultValuePipe([]), ParseArrayPipe) tags: string[],
     @CaslUser() userProxy?: UserProxy<User>,
   ) {
     const tokenUser = await userProxy.get();
 
-    console.log(file);
+    console.log(files);
     console.log(tags);
-    await this.uploadService.upload(file, tags, tokenUser.id);
+    await this.uploadService.upload(files, tags, tokenUser.id);
   }
 
   @Get()
@@ -182,5 +188,45 @@ export class DocumentController {
   @ApiResponse({ status: 404, description: 'Document not found' })
   async deleteDocument(@Param('documentId') documentId: string) {
     return this.documentService.deleteDocument(documentId);
+  }
+
+  @Get('download/:documentId')
+  @ApiOperation({ summary: 'Download a document by ID' })
+  @ApiResponse({ status: 200, description: 'Document downloaded successfully' })
+  @ApiResponse({ status: 404, description: 'Document not found' })
+  async downloadDocument(@Param('documentId') documentId: string, @Res() res) {
+    const document = await this.documentService.getDocumentById(documentId);
+
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    const fileStream = await this.uploadService.downloadFile(document.filename);
+
+    res.set({
+      'Content-Type': document.contentType,
+      'Content-Disposition': `attachment; filename="${document.originalFilename}"`,
+    });
+    fileStream.pipe(res);
+  }
+
+  @Get('preview/:documentId')
+  @ApiOperation({ summary: 'Download a document by ID' })
+  @ApiResponse({ status: 200, description: 'Document previewed successfully' })
+  @ApiResponse({ status: 404, description: 'Document not found' })
+  async previewDocument(@Param('documentId') documentId: string, @Res() res) {
+    const document = await this.documentService.getDocumentById(documentId);
+
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    const fileStream = await this.uploadService.downloadFile(document.filename);
+
+    res.set({
+      'Content-Type': document.contentType,
+      'Content-Disposition': `inline; filename="${document.originalFilename}"`,
+    });
+    fileStream.pipe(res);
   }
 }

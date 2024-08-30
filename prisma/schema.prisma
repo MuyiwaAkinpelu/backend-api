@@ -128,7 +128,7 @@ enum ApprovalStatus {
 
 model Token {
   id        String       @id @default(auto()) @map("_id") @db.ObjectId
-  owner     User         @relation(fields: [userId], references: [id])
+  owner     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String       @db.ObjectId
   code      String
   createdAt DateTime     @default(now())
@@ -149,9 +149,9 @@ model Project {
   updatedAt DateTime @updatedAt
 
   createdByUserId String? @db.ObjectId
-  createdBy       User?   @relation(fields: [createdByUserId], references: [id], name: "ProjectCreatedBy")
+  createdBy       User?   @relation(fields: [createdByUserId], references: [id], name: "ProjectCreatedBy", onDelete: SetNull)
   updatedByUserId String? @db.ObjectId
-  updatedBy       User?   @relation(fields: [updatedByUserId], references: [id], name: "ProjectUpdatedBy")
+  updatedBy       User?   @relation(fields: [updatedByUserId], references: [id], name: "ProjectUpdatedBy", onDelete: SetNull)
 
   membersIDs       String[]          @db.ObjectId
   members          User[]            @relation(fields: [membersIDs], references: [id], name: "ProjectMemberProjects")
