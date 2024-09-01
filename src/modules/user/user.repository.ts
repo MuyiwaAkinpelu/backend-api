@@ -64,13 +64,7 @@ export class UserRepository {
     });
   }
 
-  /**
-   * @desc Find all users with pagination
-   * @param where Prisma.UserWhereInput
-   * @param orderBy Prisma.UserOrderByWithRelationInput
-   * @returns Promise<PaginatorTypes.PaginatedResult<User>>
-   */
-  async findAll(
+  async findAllPaginated(
     where: Prisma.UserWhereInput,
     orderBy: Prisma.UserOrderByWithRelationInput,
     transactionClient: PrismaRepositoryClient = this.prisma,
@@ -78,6 +72,19 @@ export class UserRepository {
     return this.paginate(transactionClient.user, {
       where,
       orderBy,
+    });
+  }
+
+  async findAll(
+    where: Prisma.UserWhereInput,
+    select: Prisma.UserSelect,
+    orderBy?: Prisma.UserOrderByWithRelationInput,
+    transactionClient: PrismaRepositoryClient = this.prisma,
+  ): Promise<any> {
+    return transactionClient.user.findMany({
+      where,
+      orderBy,
+      select,
     });
   }
 

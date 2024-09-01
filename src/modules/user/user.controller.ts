@@ -51,6 +51,16 @@ import { SkipThrottle } from '@nestjs/throttler';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Get('members')
+  @ApiOperation({ summary: 'Get all members' })
+  @ApiOkBaseResponse({ dto: UserBaseEntity, isArray: true })
+  @UseGuards(AccessGuard)
+  @Serialize(UserBaseEntity)
+  @UseAbility(Actions.read, UserEntity)
+  async findAllMembers(): Promise<User[]> {
+    return this.userService.findAllMembers();
+  }
+
   @Get()
   @ApiOperation({ summary: 'Get all users' })
   @ApiQuery({ name: 'where', required: false, type: 'string' })
