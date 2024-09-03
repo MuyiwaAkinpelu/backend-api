@@ -27,7 +27,7 @@ import { DocumentService } from './document.service';
 import { UploadService } from './upload.service';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
-import { File, User } from '@prisma/client';
+import { DocumentVisibility, File, User } from '@prisma/client';
 import { CaslUser, UserProxy } from '@modules/casl';
 import { DocumentSearchDTO } from './dto/document-search.dto';
 import ApiBaseResponses from '@decorators/api-base-response.decorator';
@@ -39,6 +39,7 @@ import { ListMyDocumentsDTO } from './dto/list-my-documents.dto';
 import { ListDocumentsDTO } from './dto/list-documents.dto';
 import { CustomFileTypeValidator } from './validators/custom-filetype.validator';
 import { RenameDocumentDto } from './dto/rename-document.dto';
+import { SkipAuth } from '@modules/auth/guard/skip-auth.guard';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -51,6 +52,14 @@ export class DocumentController {
     private readonly documentService: DocumentService,
     private readonly uploadService: UploadService,
   ) {}
+
+  @ApiOperation({ summary: 'Search within publicly available documents' })
+  @ApiResponse({ status: 200, description: 'Search successful' })
+  @SkipAuth()
+  @Get('/public-search')
+  public async publicSearch(@Query() query: DocumentSearchDTO): Promise<any> {
+    return this.documentService.search(query.q, DocumentVisibility.PUBLIC);
+  }
 
   @ApiOperation({ summary: 'Search within documents' })
   @ApiResponse({ status: 200, description: 'Search successful' })

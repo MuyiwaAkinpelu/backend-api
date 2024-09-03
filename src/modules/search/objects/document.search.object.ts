@@ -1,3 +1,4 @@
+import { DocumentVisibility } from '@prisma/client';
 import { documentIndex } from '../constant/document.elastic';
 
 export class ElasticSearchBody {
@@ -13,13 +14,16 @@ export class ElasticSearchBody {
 }
 
 export class DocumentSearchObject {
-  public static searchObject(q: string) {
-    const body = this.elasticSearchBody(q);
+  public static searchObject(q: string, visibility?: DocumentVisibility) {
+    const body = this.elasticSearchBody(q, visibility);
     return { index: documentIndex._index, body };
   }
 
-  public static elasticSearchBody(q: string): ElasticSearchBody {
-    const query = {
+  public static elasticSearchBody(
+    q: string,
+    visibility?: DocumentVisibility,
+  ): ElasticSearchBody {
+    const query: any = {
       bool: {
         should: [
           {
@@ -40,6 +44,15 @@ export class DocumentSearchObject {
         ],
       },
     };
+
+    // Apply visibility filter if specified
+    if (visibility) {
+      query.bool.filter = [
+        {
+          term: { visibility }, // Filter based on visibility (PUBLIC or PRIVATE)
+        },
+      ];
+    }
 
     return new ElasticSearchBody(10, 0, query);
   }
