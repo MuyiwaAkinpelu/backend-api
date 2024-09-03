@@ -50,7 +50,21 @@ export class UserService {
     where: Prisma.UserWhereInput,
     sortBy: Prisma.UserOrderByWithRelationInput,
   ): Promise<PaginatorTypes.PaginatedResult<User>> {
-    return this.userRepository.findAll(where, sortBy);
+    return this.userRepository.findAllPaginated(where, sortBy);
+  }
+
+  findAllMembers(): Promise<User[]> {
+    const where: Prisma.UserWhereInput = {
+      isActive: true,
+    };
+    const select: Prisma.UserSelect = {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      avatar: true,
+    };
+    return this.userRepository.findAll(where, select);
   }
 
   /**

@@ -130,7 +130,7 @@ describe('UserService', () => {
     });
   });
 
-  describe('when the findAll method is calling', () => {
+  describe('when the findAllPaginted method is calling', () => {
     let usersMock: User[];
     let paginatedData: PaginatedResult<User>;
 
@@ -141,7 +141,7 @@ describe('UserService', () => {
 
     describe('and a valid input without options is provided', () => {
       beforeEach(() => {
-        mockUserRepository.findAll.mockReturnValueOnce(paginatedData);
+        mockUserRepository.findAllPaginated.mockReturnValueOnce(paginatedData);
       });
 
       it('should returns all users', async () => {

@@ -27,9 +27,9 @@ export class DocumentService {
     this.logger = new Logger(DocumentService.name);
   }
 
-  public async search(q: any): Promise<any> {
+  public async search(q: any, visibility?: DocumentVisibility): Promise<any> {
     this.logger.log(q);
-    const data = DocumentSearchObject.searchObject(q);
+    const data = DocumentSearchObject.searchObject(q, visibility);
     this.logger.log(data);
     return await this.searchService.searchIndex(data);
   }
