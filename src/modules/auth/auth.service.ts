@@ -81,7 +81,9 @@ export class AuthService {
     // Check if device exists in Redis
     const isNewDevice = await this.isDeviceIPNew(testUser.id, deviceIp);
 
-    if (isNewDevice) {
+    // temporarily turn off 2fa
+    // TODO: fix frontend otp
+    if (false) {
       // Generate OTP
       const otp = await this.tokenService.create(
         testUser.id,
