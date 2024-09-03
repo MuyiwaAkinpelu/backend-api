@@ -47,6 +47,7 @@ export const TOKEN_IS_EXPIRED = '401009: Token is expired';
 export const USER_NOT_IN_PROJECT = '401010: User is not part of the project';
 export const USER_NOT_MANAGER =
   '401011: User is not a part of project managers';
+export const ACCOUNT_NOT_ACTIVE = '401011: Account is not active';
 
 export const FORBIDDEN_RESOURCE = '403000: Forbidden resource';
 
