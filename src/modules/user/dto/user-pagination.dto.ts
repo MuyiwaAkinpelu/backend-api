@@ -2,8 +2,14 @@ import { Order } from '@constants/order.constants';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { UserSortableColumns } from '../types';
 
-export class PaginationDTO {
+export class UserPaginationDTO {
+  @ApiPropertyOptional({ enum: UserSortableColumns })
+  @IsOptional()
+  @IsEnum(UserSortableColumns)
+  sortBy?: UserSortableColumns = UserSortableColumns.CREATED_AT;
+
   @ApiPropertyOptional({ enum: Order, default: Order.ASC })
   @IsEnum(Order)
   @IsOptional()

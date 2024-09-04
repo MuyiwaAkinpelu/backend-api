@@ -37,10 +37,10 @@ import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import UserBaseEntity from '@modules/user/entities/user-base.entity';
 import { UserHook } from '@modules/user/user.hook';
 import ApiOkBaseResponse from '@decorators/api-ok-base-response.decorator';
-import { PaginationDTO } from './dto/pagination.dto';
 import { UpdateUserRolesDTO } from './dto/update-user-roles.dto';
 import { SetUserRoleDTO } from './dto/set-user-role.dto';
 import { SkipThrottle } from '@nestjs/throttler';
+import { UserPaginationDTO } from './dto/user-pagination.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -63,19 +63,14 @@ export class UserController {
 
   @Get()
   @ApiOperation({ summary: 'Get all users' })
-  @ApiQuery({ name: 'where', required: false, type: 'string' })
-  @ApiQuery({ name: 'sortBy', required: false, type: 'string' })
-  @ApiOkBaseResponse({ dto: UserBaseEntity, isArray: true })
+  @ApiOkBaseResponse({ dto: UserBaseEntity, isArray: true, meta: true })
   @UseGuards(AccessGuard)
   @Serialize(UserBaseEntity)
   @UseAbility(Actions.read, UserEntity)
   async findAll(
-    @Query() paginationDTO: PaginationDTO,
-    @Query('where', WherePipe) where?: Prisma.UserWhereInput,
-    @Query('sortBy', OrderByPipe)
-    sortBy?: Prisma.UserOrderByWithRelationInput,
+    @Query() paginationDTO: UserPaginationDTO,
   ): Promise<PaginatorTypes.PaginatedResult<User>> {
-    return this.userService.findAll(paginationDTO, where, sortBy);
+    return this.userService.findAll(paginationDTO);
   }
 
   @Get('me')
