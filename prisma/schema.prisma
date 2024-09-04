@@ -107,7 +107,7 @@ model ApprovalRequest {
   documentId    String         @db.ObjectId
   document      File           @relation(fields: [documentId], references: [id], onDelete: Cascade)
   projectId     String         @db.ObjectId
-  project       Project        @relation(fields: [projectId], references: [id])
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   submittedById String?        @db.ObjectId
   submittedBy   User?          @relation("SubmittedRequests", fields: [submittedById], references: [id])
 
