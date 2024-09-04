@@ -34,7 +34,7 @@ export class SignUpDto {
     description: 'Phone number',
   })
   @IsPhoneNumber()
-  @IsNotEmpty()
+  @IsOptional()
   readonly phone: string;
 
   @ApiProperty({ type: String, default: 'string!12345' })
