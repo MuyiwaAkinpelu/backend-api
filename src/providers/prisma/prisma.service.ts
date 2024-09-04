@@ -39,6 +39,8 @@ export class PrismaService
     // approval request middlewares
     this.$use(this.prismaMiddleware.onApprovalRequestCreate());
     this.$use(this.prismaMiddleware.onApprovalRequestUpdate());
+    // account creation middleware
+    this.$use(this.prismaMiddleware.onAccountCreate());
   }
 
   async onModuleInit() {

@@ -5,7 +5,7 @@ import swaggerConfig from '@config/swagger.config';
 import HealthModule from '@modules/health/health.module';
 import { PrismaModule } from '@providers/prisma/prisma.module';
 import { UserModule } from '@modules/user/user.module';
-import { loggingMiddleware, createUserMiddleware } from '@providers/prisma';
+import { loggingMiddleware } from '@providers/prisma';
 import { AuthModule } from '@modules/auth/auth.module';
 import jwtConfig from '@config/jwt.config';
 import { CaslModule } from '@modules/casl';
@@ -47,7 +47,7 @@ import { ProjectModule } from '@modules/project/project.module';
     PrismaModule.forRoot({
       isGlobal: true,
       prismaServiceOptions: {
-        middlewares: [loggingMiddleware(), createUserMiddleware()],
+        middlewares: [loggingMiddleware()],
       },
     }),
     JwtModule.register({
