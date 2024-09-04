@@ -128,6 +128,7 @@ export class AuthService {
         email: true,
         password: true,
         roles: true,
+        isActive: true,
       },
     });
   }
