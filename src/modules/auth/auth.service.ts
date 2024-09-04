@@ -8,6 +8,7 @@ import {
 import { SignUpDto } from './dto/sign-up.dto';
 import { UserRepository } from '@modules/user/user.repository';
 import {
+  ACCOUNT_NOT_ACTIVE,
   INVALID_CREDENTIALS,
   MFA_PHONE_OR_TOKEN_REQUIRED,
   USER_CONFLICT,
@@ -68,6 +69,10 @@ export class AuthService {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
+    if (!testUser.isActive) {
+      throw new UnauthorizedException(ACCOUNT_NOT_ACTIVE);
+    }
+
     if (
       !(await this.authTokenService.isPasswordCorrect(
         signInDto.password,
@@ -123,6 +128,7 @@ export class AuthService {
         email: true,
         password: true,
         roles: true,
+        isActive: true,
       },
     });
   }
