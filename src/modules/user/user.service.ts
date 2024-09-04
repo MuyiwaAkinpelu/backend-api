@@ -2,8 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from '@modules/user/user.repository';
 import { Prisma, Roles, User } from '@prisma/client';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
-import { PaginationDTO } from './dto/pagination.dto';
 import { USER_NOT_FOUND } from '@constants/errors.constants';
+import { UserFiltersDTO } from './dto/user-filters.dto';
+import { ListUsersDTO } from './dto/users.dto';
 
 @Injectable()
 export class UserService {
@@ -46,11 +47,28 @@ export class UserService {
    * @param sortBy
    */
   findAll(
-    paginationDTO: PaginationDTO,
-    where: Prisma.UserWhereInput,
-    sortBy: Prisma.UserOrderByWithRelationInput,
+    projectsDTO: ListUsersDTO,
   ): Promise<PaginatorTypes.PaginatedResult<User>> {
-    return this.userRepository.findAllPaginated(where, sortBy);
+    const { page, limit, sortBy, order, ...filters } = projectsDTO;
+
+    const where: Prisma.UserWhereInput = this.buildWhereClause(filters);
+    const include: Prisma.UserInclude = undefined;
+
+    const paginationOptions: PaginatorTypes.PaginateOptions = {
+      page,
+      perPage: limit,
+    };
+
+    const sortByColumn: Prisma.UserOrderByWithRelationInput = {
+      [sortBy]: order,
+    };
+
+    return this.userRepository.findAllPaginated(
+      where,
+      include,
+      sortByColumn,
+      paginationOptions,
+    );
   }
 
   findAllMembers(): Promise<User[]> {
@@ -138,5 +156,30 @@ export class UserService {
   async verifyUser(userId: string): Promise<User> {
     const user = await this.userRepository.findById(userId);
     return this.userRepository.updateUser(userId, { isVerified: true });
+  }
+
+  private buildWhereClause(filters: UserFiltersDTO) {
+    const where: Prisma.UserWhereInput = {};
+
+    if (filters) {
+      if (filters.createdAfter) {
+        where.createdAt = { gte: new Date(filters.createdAfter) };
+      }
+      if (filters.createdBefore) {
+        where.createdAt = { lte: new Date(filters.createdBefore) };
+      }
+      if (filters.role) {
+        where.roles = { has: filters.role };
+      }
+      if (filters.search) {
+        where.OR = [
+          { firstName: { contains: filters.search, mode: 'insensitive' } },
+          { lastName: { contains: filters.search, mode: 'insensitive' } },
+          { email: { contains: filters.search, mode: 'insensitive' } },
+        ];
+      }
+    }
+
+    return where;
   }
 }

@@ -66,12 +66,16 @@ export class UserRepository {
 
   async findAllPaginated(
     where: Prisma.UserWhereInput,
+    include: Prisma.UserInclude,
     orderBy: Prisma.UserOrderByWithRelationInput,
+    paginationOptions?: PaginatorTypes.PaginateOptions,
     transactionClient: PrismaRepositoryClient = this.prisma,
   ): Promise<PaginatorTypes.PaginatedResult<User>> {
-    return this.paginate(transactionClient.user, {
+    const paginate = paginator(paginationOptions);
+    return paginate(transactionClient.user, {
       where,
       orderBy,
+      include,
     });
   }
 

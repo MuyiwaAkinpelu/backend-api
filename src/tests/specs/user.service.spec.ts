@@ -146,15 +146,11 @@ describe('UserService', () => {
 
       it('should returns all users', async () => {
         expect(
-          await userService.findAll(
-            {
-              page: 1,
-              limit: 10,
-              skip: 0,
-            },
-            {},
-            {},
-          ),
+          await userService.findAll({
+            page: 1,
+            limit: 10,
+            skip: 0,
+          }),
         ).toStrictEqual(paginatedData);
       });
     });
