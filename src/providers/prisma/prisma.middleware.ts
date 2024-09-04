@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import {
   ApprovalRequest,
   ApprovalStatus,
@@ -188,6 +189,31 @@ export class PrismaMiddleware {
         }
         return result;
       }
+      return next(params);
+    };
+  }
+
+  onAccountCreate(): Prisma.Middleware {
+    return async (params: Prisma.MiddlewareParams, next): Promise<any> => {
+      if (params.model === 'User' && params.action === 'create') {
+        try {
+          const { firstName, lastName, email } = params.args.data;
+          console.log('sending account creation email', params.args.data);
+          this.mailService.sendAccountCreationNotification(email, {
+            fullName: `${firstName} ${lastName}`,
+          });
+        } catch (error) {
+          this.logger.error(error);
+        }
+
+        // hash user password
+        params.args.data.password = await bcrypt.hash(
+          params.args.data.password,
+          10,
+        );
+        return next(params);
+      }
+
       return next(params);
     };
   }

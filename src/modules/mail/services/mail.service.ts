@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
-import { CONTACT_EMAIL, SITE_URL } from '@constants/env.constants';
+import { CLIENT_URL, CONTACT_EMAIL } from '@constants/env.constants';
 
 @Injectable()
 export class MailService {
@@ -12,7 +12,7 @@ export class MailService {
     @Inject(ConfigService) private readonly configService: ConfigService,
     private readonly mailerService: MailerService,
   ) {
-    this.siteUrl = this.configService.get(SITE_URL);
+    this.siteUrl = this.configService.get(CLIENT_URL);
     this.contactEmail = this.configService.get(CONTACT_EMAIL);
   }
 
@@ -134,5 +134,24 @@ export class MailService {
     } catch (error) {
       Logger.error('Error sending email', error.message);
     }
+  }
+
+  async sendAccountCreationNotification(
+    to: string,
+    details: {
+      fullName: string;
+    },
+  ) {
+    await this.mailerService.sendMail({
+      to,
+      subject: 'Your Account has been created',
+      template: './account-creation-notification',
+      context: {
+        ...details,
+        year: new Date().getFullYear(),
+        website: this.siteUrl,
+        resetPasswordUrl: this.siteUrl + '/forgot-password',
+      },
+    });
   }
 }
