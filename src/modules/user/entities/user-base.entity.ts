@@ -41,4 +41,12 @@ export default class UserBaseEntity extends PartialType(UserEntity) {
   @ApiProperty({ type: Array })
   @Expose()
   declare readonly roles: Roles[];
+
+  @ApiProperty({ type: String })
+  @Expose()
+  declare readonly createdAt: Date;
+
+  @ApiProperty({ type: String })
+  @Expose()
+  declare readonly updatedAt: Date;
 }
