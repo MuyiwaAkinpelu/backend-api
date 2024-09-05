@@ -19,6 +19,7 @@ import { AuthTokenService } from '@modules/auth/auth-token.service';
 import { RedisService } from './redis.service';
 import { MailService } from '@modules/mail/services/mail.service';
 import { TokenService } from './token.service';
+import { PasswordResetService } from './password-reset.service';
 
 @Injectable()
 export class AuthService {
@@ -30,9 +31,11 @@ export class AuthService {
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
     private readonly tokenService: TokenService,
+    private readonly passwordResetService: PasswordResetService,
   ) {}
 
   /**
+   * DEPRECATED
    * @desc Create a new user
    * @param signUpDto
    * @returns Promise<User> - Created user
@@ -49,6 +52,39 @@ export class AuthService {
     }
 
     return this.userRepository.create(signUpDto);
+  }
+
+  /**
+   * @desc Create a new user
+   * @param signUpDto
+   * @returns Promise<User> - Created user
+   * @throws ConflictException - User with this email or phone already exists
+   */
+  async createAccount(signUpDto: SignUpDto): Promise<User> {
+    const testUser: User = await this.userRepository.findOne({
+      where: { email: signUpDto.email },
+    });
+
+    if (testUser) {
+      // 409001: User with this email or phone already exists
+      throw new ConflictException(USER_CONFLICT);
+    }
+
+    const user = await this.userRepository.create(signUpDto);
+    const passwordResetLink =
+      await this.passwordResetService.newAccountResetLink(user.id);
+
+    try {
+      const { firstName, lastName, email } = user;
+      this.mailService.sendAccountCreationNotification(email, {
+        fullName: `${firstName} ${lastName}`,
+        passwordResetLink,
+      });
+    } catch (error) {
+      this.logger.error(error);
+    }
+
+    return user;
   }
 
   /**

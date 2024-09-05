@@ -140,6 +140,7 @@ export class MailService {
     to: string,
     details: {
       fullName: string;
+      passwordResetLink: string;
     },
   ) {
     await this.mailerService.sendMail({
@@ -150,7 +151,6 @@ export class MailService {
         ...details,
         year: new Date().getFullYear(),
         website: this.siteUrl,
-        resetPasswordUrl: this.siteUrl + '/forgot-password',
       },
     });
   }

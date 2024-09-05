@@ -52,11 +52,15 @@ export class AuthController {
   @Version('1')
   @ApiBody({ type: SignUpDto })
   @Serialize(UserBaseEntity)
-  @ApiOperation({ summary: 'Register user account' })
-  @SkipAuth()
+  @ApiOperation({ summary: 'Create user account' })
   @Post('sign-up')
   create(@Body() signUpDto: SignUpDto): Promise<User> {
-    return this.authService.singUp(signUpDto);
+    const { password, ...rest } = signUpDto;
+
+    return this.authService.createAccount({
+      ...rest,
+      password: password || 'String!12345',
+    });
   }
 
   @Version('1')

@@ -37,7 +37,7 @@ export class SignUpDto {
   @IsOptional()
   readonly phone: string;
 
-  @ApiProperty({ type: String, default: 'string!12345' })
+  @ApiPropertyOptional({ type: String, default: 'String!12345' })
   @IsString()
   @Length(6, 20)
   @Matches(/[\d\W]/, {
@@ -46,6 +46,7 @@ export class SignUpDto {
   })
   @Matches(/[a-zA-Z]/, { message: 'password must contain at least one letter' })
   @Matches(/^\S+$/, { message: 'password must not contain spaces' })
+  @IsOptional()
   readonly password!: string;
 
   @ApiProperty({
