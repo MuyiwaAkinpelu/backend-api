@@ -43,6 +43,18 @@ export class PasswordResetService {
     });
   }
 
+  async newAccountResetLink(id) {
+    const token = await this.tokenService.create(
+      id,
+      TokenUseCase.PWD_RESET,
+      TokenType.HEX,
+    );
+
+    const link = `${this.clientURL}/reset-password/${token.code}/?u=${id}`;
+
+    return link;
+  }
+
   async resetPassword(userId: string, token: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     const hashedPassword = await bcrypt.hash(newPassword, 10);
