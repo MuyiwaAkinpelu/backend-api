@@ -41,6 +41,7 @@ import { UpdateUserRolesDTO } from './dto/update-user-roles.dto';
 import { SetUserRoleDTO } from './dto/set-user-role.dto';
 import { SkipThrottle } from '@nestjs/throttler';
 import { UserPaginationDTO } from './dto/user-pagination.dto';
+import { ListUsersDTO } from './dto/users.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -68,7 +69,7 @@ export class UserController {
   @Serialize(UserBaseEntity)
   @UseAbility(Actions.read, UserEntity)
   async findAll(
-    @Query() paginationDTO: UserPaginationDTO,
+    @Query() paginationDTO: ListUsersDTO,
   ): Promise<PaginatorTypes.PaginatedResult<User>> {
     return this.userService.findAll(paginationDTO);
   }

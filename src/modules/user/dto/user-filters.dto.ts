@@ -9,7 +9,7 @@ export class UserFiltersDTO {
   })
   @IsOptional()
   @IsEnum(Roles)
-  role?: Roles = Roles.MANAGEMENT_STAFF;
+  role?: Roles;
 
   @IsOptional()
   @IsDateString()
