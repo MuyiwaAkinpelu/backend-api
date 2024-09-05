@@ -61,7 +61,6 @@ export class UploadService {
           tags: [
             // Optional tags
             { Key: 'uploaderId', Value: uploaderId },
-            ...tags.map((tag) => ({ Key: 'tag', Value: tag })),
           ],
           queueSize: 4, // Optional concurrency configuration
           partSize: 1024 * 1024 * 5, // Optional size of each part, in bytes, at least 5MB
