@@ -140,6 +140,11 @@ export class AuthService {
       throw new BadRequestException(MFA_PHONE_OR_TOKEN_REQUIRED);
     }
 
+    // update lastLogin date
+    await this.userRepository.updateUser(testUser.id, {
+      lastLogin: new Date(),
+    });
+
     return this.sign(testUser, deviceIp);
   }
 
