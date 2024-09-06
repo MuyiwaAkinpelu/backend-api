@@ -8,18 +8,19 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  email       String   @unique
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  email       String    @unique
   phone       String?
   firstName   String?
   lastName    String?
   password    String
   avatar      String?
-  roles       Roles[]  @default([GUEST])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
-  isVerified  Boolean? @default(false)
-  isActive    Boolean? @default(false)
+  roles       Roles[]   @default([GUEST])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+  lastLogin   DateTime?
+  isVerified  Boolean?  @default(false)
+  isActive    Boolean?  @default(false)
   department  String?
   designation String?
 

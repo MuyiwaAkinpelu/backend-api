@@ -49,4 +49,8 @@ export default class UserBaseEntity extends PartialType(UserEntity) {
   @ApiProperty({ type: String })
   @Expose()
   declare readonly updatedAt: Date;
+
+  @ApiProperty({ type: String })
+  @Expose()
+  declare readonly lastLogin: Date;
 }

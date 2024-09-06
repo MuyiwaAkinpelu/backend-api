@@ -2,6 +2,7 @@ import { User } from '@prisma/client';
 import { Roles } from '@modules/app/app.roles';
 
 export default class UserEntity implements User {
+  lastLogin: Date;
   department: string;
   designation: string;
   readonly id!: string;
