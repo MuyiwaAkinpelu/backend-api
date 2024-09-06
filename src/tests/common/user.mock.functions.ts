@@ -48,6 +48,7 @@ export function createUsers(length: number): User[] {
       isActive: true,
       projectMemberProjectIDs: [],
       projectManagerProjectIDs: [],
+      lastLogin: undefined,
     };
     result.push(user);
   }
