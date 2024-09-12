@@ -20,6 +20,7 @@ import { ThrottlerExceptionsFilter } from '@filters/throttler-exception.filter';
 import { TransformInterceptor } from '@interceptors/transform.interceptor';
 import { AccessExceptionFilter } from '@filters/access-exception.filter';
 import { NotFoundExceptionFilter } from '@filters/not-found-exception.filter';
+import helmet from 'helmet';
 
 async function bootstrap(): Promise<{ port: number }> {
   /**
@@ -136,6 +137,28 @@ async function bootstrap(): Promise<{ port: number }> {
       new PrismaClientExceptionFilter(httpAdapter),
       new ValidationExceptionFilter(),
       new ThrottlerExceptionsFilter(),
+    );
+  }
+
+  {
+    // Configure helmet to set the CSP header
+    app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            // Allow loading resources only from the current domain
+            defaultSrc: ["'self'"],
+
+            // Block all frames (prevents clickjacking)
+            frameAncestors: ["'none'"],
+
+            // Optionally allow specific sources for scripts, styles, etc.
+            scriptSrc: ["'self'", 'drs.scidar.org'],
+            styleSrc: ["'self'", 'drs.scidar.org'],
+            imgSrc: ["'self'", 'drs.scidar.org'],
+          },
+        },
+      }),
     );
   }
 
