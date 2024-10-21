@@ -98,7 +98,7 @@ export class DocumentController {
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
-          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 }), //10mb
+          new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 100 }), //100mb
           new CustomFileTypeValidator([
             'image/png',
             'image/jpeg',
