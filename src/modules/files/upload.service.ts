@@ -13,6 +13,7 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as officeParser from 'officeparser';
 import { Readable } from 'stream';
+import { ApprovalStatus, Roles } from '@prisma/client';
 
 @Injectable()
 export class UploadService {
@@ -38,6 +39,8 @@ export class UploadService {
     files: Express.Multer.File[], // Updated to handle multiple files
     tags: string[],
     uploaderId: string,
+    userRoles: Roles[],
+    projectId?: string,
   ) {
     try {
       const uploadedFiles = [];
@@ -85,6 +88,8 @@ export class UploadService {
           size: file.size,
           tags,
           uploaderId,
+          userRoles,
+          projectId,
         });
 
         uploadedFiles.push(savedFile);
@@ -106,6 +111,8 @@ export class UploadService {
     size,
     tags,
     uploaderId,
+    userRoles,
+    projectId,
   }: SaveFileToDBParams) {
     // Save file details to the database using Prisma
     const savedFile = await this.prisma.file.create({
@@ -121,6 +128,29 @@ export class UploadService {
         contentType,
         size,
         tags,
+        ...(userRoles.includes(Roles.SYSTEM_ADMIN) &&
+          projectId && {
+            approvalRequests: {
+              create: {
+                approvedBy: {
+                  connect: {
+                    id: uploaderId,
+                  },
+                },
+                project: {
+                  connect: {
+                    id: projectId,
+                  },
+                },
+                status: ApprovalStatus.APPROVED,
+              },
+            },
+            projects: {
+              connect: {
+                id: projectId,
+              },
+            },
+          }),
       },
     });
 

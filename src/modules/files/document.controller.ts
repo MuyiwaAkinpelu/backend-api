@@ -16,6 +16,7 @@ import {
   DefaultValuePipe,
   UploadedFiles,
   Res,
+  Optional,
 } from '@nestjs/common';
 import {
   ApiExtraModels,
@@ -40,6 +41,7 @@ import { ListDocumentsDTO } from './dto/list-documents.dto';
 import { CustomFileTypeValidator } from './validators/custom-filetype.validator';
 import { RenameDocumentDto } from './dto/rename-document.dto';
 import { SkipAuth } from '@modules/auth/guard/skip-auth.guard';
+import { ParseMongoIdPipe } from '@pipes/parse-mongoid.pipe';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -76,6 +78,11 @@ export class DocumentController {
     schema: {
       type: 'object',
       properties: {
+        projectId: {
+          type: 'string',
+          nullable: true,
+          description: 'Optional MongoDB project ID',
+        },
         tags: {
           type: 'array',
           items: { type: 'string' },
@@ -117,13 +124,27 @@ export class DocumentController {
     )
     files: Express.Multer.File[],
     @Body('tags', new DefaultValuePipe([]), ParseArrayPipe) tags: string[],
+    @Optional()
+    @Body(
+      'projectId',
+      new ParseMongoIdPipe({
+        required: false,
+      }),
+    )
+    projectId?: string,
     @CaslUser() userProxy?: UserProxy<User>,
   ) {
     const tokenUser = await userProxy.get();
 
     console.log(files);
     console.log(tags);
-    await this.uploadService.upload(files, tags, tokenUser.id);
+    await this.uploadService.upload(
+      files,
+      tags,
+      tokenUser.id,
+      tokenUser.roles,
+      projectId,
+    );
   }
 
   @Get()
