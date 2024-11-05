@@ -67,7 +67,7 @@ export class ApprovalRequestController {
   })
   @ApiResponse({ status: 404, description: 'Approval request not found' })
   async getApprovalRequestById(
-    @Param('requestId', ParseMongoIdPipe) requestId: string,
+    @Param('requestId', new ParseMongoIdPipe()) requestId: string,
   ): Promise<ApprovalRequest> {
     return this.approvalRequestService.findById(requestId);
   }
@@ -121,7 +121,7 @@ export class ApprovalRequestController {
     description: 'User is not a manager of the project',
   })
   async approveRequest(
-    @Param('requestId', ParseMongoIdPipe) requestId: string,
+    @Param('requestId', new ParseMongoIdPipe()) requestId: string,
     @CaslUser() userProxy?: UserProxy<User>,
   ): Promise<ApprovalRequest> {
     const tokenUser = await userProxy.get();
@@ -144,7 +144,7 @@ export class ApprovalRequestController {
     description: 'User is not a manager of the project',
   })
   async declineRequest(
-    @Param('requestId', ParseMongoIdPipe) requestId: string,
+    @Param('requestId', new ParseMongoIdPipe()) requestId: string,
     @Body() declineRequestDTO: DeclineRequestDTO,
     @CaslUser() userProxy?: UserProxy<User>,
   ): Promise<ApprovalRequest> {
