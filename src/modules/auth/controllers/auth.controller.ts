@@ -38,6 +38,7 @@ import { TokenService } from '../token.service';
 import { PasswordResetService } from '../password-reset.service';
 import { RequestResetPasswordDto } from '../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Auth')
 @ApiBaseResponses()
@@ -49,6 +50,7 @@ export class AuthController {
     private readonly passwordResetService: PasswordResetService,
   ) {}
 
+  @SkipThrottle()
   @Version('1')
   @ApiBody({ type: SignUpDto })
   @Serialize(UserBaseEntity)
