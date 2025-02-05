@@ -35,8 +35,8 @@ jobs:
       - name: Log in to DigitalOcean Container Registry with short-lived credentials
         run: doctl registry login --expiry-seconds 600
 
-      - name: Remove all old images
-        run: if [ ! -z "$(doctl registry repository list | grep "${{ vars.IMAGE_NAME }}")" ]; then doctl registry repository delete-manifest ${{ vars.IMAGE_NAME }} $(doctl registry repository list-tags ${{ vars.IMAGE_NAME }} | grep -o "sha.*") --force; else echo "No repository"; fi
+      # - name: Remove all old images
+      #   run: if [ ! -z "$(doctl registry repository list | grep "${{ vars.IMAGE_NAME }}")" ]; then doctl registry repository delete-manifest ${{ vars.IMAGE_NAME }} $(doctl registry repository list-tags ${{ vars.IMAGE_NAME }} | grep -o "sha.*") --force; else echo "No repository"; fi
 
       - name: Push image to DigitalOcean Container Registry
         run: docker push ${{ vars.REGISTRY }}/${{ vars.IMAGE_NAME }}:$(echo $GITHUB_SHA | head -c7)
