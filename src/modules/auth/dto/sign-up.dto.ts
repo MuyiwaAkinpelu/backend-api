@@ -39,7 +39,7 @@ export class SignUpDto {
 
   @ApiPropertyOptional({ type: String, default: 'String!12345' })
   @IsString()
-  @Length(6, 20)
+  @Length(6, 99)
   @Matches(/[\d\W]/, {
     message:
       'password must contain at least one digit and/or special character',
