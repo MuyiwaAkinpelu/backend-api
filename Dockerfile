@@ -24,7 +24,7 @@ RUN yarn build
 # ---------------------------------------
 # Production stage
 # ---------------------------------------
-FROM node:18-alpine AS production
+FROM node:18-bullseye AS production
 
 WORKDIR /app
 
