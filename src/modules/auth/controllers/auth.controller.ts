@@ -41,6 +41,7 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Auth')
+@SkipThrottle()
 @ApiBaseResponses()
 @Controller('auth')
 export class AuthController {
