@@ -9,6 +9,6 @@ export class SignInDto {
 
   @ApiProperty({ type: String, default: 'string!12345' })
   @IsString()
-  @Length(6, 20)
+  @Length(6, 99)
   readonly password!: string;
 }
