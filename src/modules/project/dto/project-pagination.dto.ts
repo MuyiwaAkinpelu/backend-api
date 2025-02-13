@@ -36,7 +36,7 @@ export class ProjectsPaginationDTO {
 
   @ApiPropertyOptional({
     minimum: 1,
-    maximum: 50,
+    maximum: 200,
     default: 10,
     description: 'Items per page',
   })
