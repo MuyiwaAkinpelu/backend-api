@@ -119,7 +119,7 @@ export class PrismaMiddleware {
               documentName: document.originalFilename,
               requestedBy: `${submittedBy.firstName} ${submittedBy.lastName}`,
               submissionDate: new Date().toISOString(),
-              reviewLink: `https://drs.scidar.org/projects/${project.id}/requests/${result.id}/review`,
+              reviewLink: `https://drs.scidar.org/audit-approval`,
             },
           );
         }
