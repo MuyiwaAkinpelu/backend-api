@@ -42,6 +42,7 @@ import { SetUserRoleDTO } from './dto/set-user-role.dto';
 import { SkipThrottle } from '@nestjs/throttler';
 import { UserPaginationDTO } from './dto/user-pagination.dto';
 import { ListUsersDTO } from './dto/users.dto';
+import { UpdateUserDTO } from './dto/update-user.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -107,6 +108,22 @@ export class UserController {
     console.log(subject);
     console.log(conditions.toMongo());
     return subject;
+  }
+
+  /**
+   * Patch user data.
+   * @param userId The ID of the user to update.
+   * @param updateUserRolesDTO The new roles to assign to the user.
+   * @returns The updated user.
+   */
+  @Put(':userId')
+  @Serialize(UserBaseEntity)
+  @ApiOperation({ summary: 'Update user profile' })
+  async updateUserProfile(
+    @Param('userId') userId: string,
+    @Body() updateUserDTO: UpdateUserDTO,
+  ) {
+    return this.userService.updateUser(userId, updateUserDTO);
   }
 
   /**
