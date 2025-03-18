@@ -35,7 +35,8 @@ export class PrismaMiddleware {
             result.filename,
             result.contentType,
           );
-          await this.documentESIndex.insertFileDocument({
+          // removed await so that document will be indexed asynchronously
+          this.documentESIndex.insertFileDocument({
             ...result,
             content,
           });
