@@ -112,16 +112,14 @@ export class PrismaMiddleware {
           const managerEmails = request.project.managers.map(
             (manager) => manager.email,
           );
-          await this.mailService.sendApprovalRequestNotification(
-            managerEmails,
-            {
-              projectName: project.name,
-              documentName: document.originalFilename,
-              requestedBy: `${submittedBy.firstName} ${submittedBy.lastName}`,
-              submissionDate: new Date().toISOString(),
-              reviewLink: `https://drs.scidar.org/audit-approval`,
-            },
-          );
+          // Send an email to the project manager
+          this.mailService.sendApprovalRequestNotification(managerEmails, {
+            projectName: project.name,
+            documentName: document.originalFilename,
+            requestedBy: `${submittedBy.firstName} ${submittedBy.lastName}`,
+            submissionDate: new Date().toISOString(),
+            reviewLink: `https://drs.scidar.org/audit-approval`,
+          });
         }
       }
       return result;
