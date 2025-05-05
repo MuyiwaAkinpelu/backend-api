@@ -27,9 +27,11 @@ import { MailController } from './controllers/mail.controller';
             user: configService.getOrThrow(MAIL_USER),
             pass: configService.getOrThrow(MAIL_PASSWORD),
           },
+          debug: true, // <-- Enable Nodemailer debugging
+          logger: true, // <-- Log to console
         },
         defaults: {
-          from: `"No Reply" <${configService.get(MAIL_FROM)}>`,
+          from: `"SCIDaR DRS" <${configService.get(MAIL_FROM)}>`,
         },
         template: {
           dir: __dirname + '/templates',
