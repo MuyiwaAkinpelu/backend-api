@@ -10,4 +10,7 @@ export const permissions: Permissions<Roles, Subjects, Actions> = {
   GUEST({ can }) {
     can(Actions.delete, TokensEntity);
   },
+  SYSTEM_ADMIN({ can }) {
+    can(Actions.manage, TokensEntity);
+  },
 };

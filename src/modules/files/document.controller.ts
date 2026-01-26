@@ -53,7 +53,7 @@ export class DocumentController {
   constructor(
     private readonly documentService: DocumentService,
     private readonly uploadService: UploadService,
-  ) {}
+  ) { }
 
   @ApiOperation({ summary: 'Search within publicly available documents' })
   @ApiResponse({ status: 200, description: 'Search successful' })
@@ -136,8 +136,8 @@ export class DocumentController {
   ) {
     const tokenUser = await userProxy.get();
 
-    console.log(files);
-    console.log(tags);
+    // console.log(files);
+    // console.log(tags);
     await this.uploadService.upload(
       files,
       tags,
@@ -147,10 +147,21 @@ export class DocumentController {
     );
   }
 
+  @Get('public')
+  @SkipAuth()
+  @ApiOperation({ summary: 'Get all public documents' })
+  @ApiResponse({ status: 200, description: 'Public documents retrieved successfully' })
+  async getPublicDocuments(
+    @Query() paginationDTO: ListDocumentsDTO,
+  ): Promise<PaginatorTypes.PaginatedResult<File>> {
+    paginationDTO.visibility = DocumentVisibility.PUBLIC;
+    return this.documentService.getDocuments(paginationDTO);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Get all documents with pagination' })
   @ApiResponse({ status: 200, description: 'Documents retrieved successfully' })
-  // @Serialize(FileBaseEntity) TODO: Fix serializer
+  @Serialize(FileBaseEntity)
   async getDocuments(
     @Query() paginationDTO: ListDocumentsDTO,
   ): Promise<PaginatorTypes.PaginatedResult<File>> {
@@ -160,6 +171,7 @@ export class DocumentController {
   @Get('mine')
   @ApiOperation({ summary: 'Get your documents with pagination' })
   @ApiResponse({ status: 200, description: 'Documents retrieved successfully' })
+  @Serialize(FileBaseEntity)
   async getMyDocuments(
     @Query() paginationDTO: ListMyDocumentsDTO,
     @CaslUser() userProxy?: UserProxy<User>,
@@ -173,7 +185,7 @@ export class DocumentController {
   @ApiResponse({ status: 200, description: 'Document retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Document not found' })
   async getDocumentById(@Param('documentId') documentId: string) {
-    return this.documentService.getDocumentById(documentId);
+    return this.documentService.getDocumentById(documentId, true);
   }
 
   @Patch(':documentId/rename')
@@ -231,6 +243,8 @@ export class DocumentController {
       return res.status(404).json({ message: 'Document not found' });
     }
 
+    await this.documentService.incrementDownload(documentId);
+
     const fileStream = await this.uploadService.downloadFile(document.filename);
 
     res.set({
@@ -245,7 +259,7 @@ export class DocumentController {
   @ApiResponse({ status: 200, description: 'Document previewed successfully' })
   @ApiResponse({ status: 404, description: 'Document not found' })
   async previewDocument(@Param('documentId') documentId: string, @Res() res) {
-    const document = await this.documentService.getDocumentById(documentId);
+    const document = await this.documentService.getDocumentById(documentId, true);
 
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });

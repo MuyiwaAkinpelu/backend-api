@@ -7,9 +7,11 @@ import {
   Param,
   Body,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
-import { Project } from '@prisma/client';
+import { Project, User, File } from '@prisma/client';
+import { AccessGuard, Actions, CaslUser, UseAbility, UserProxy } from '@modules/casl';
 import {
   ApiTags,
   ApiOperation,
@@ -28,6 +30,8 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { ListProjectsDTO } from './dto/projects.dto';
 import { AddProjectManagerDTO } from './dto/add-manager.dto';
 import { PROJECT_NOT_FOUND } from '@constants/errors.constants';
+import Serialize from '@decorators/serialize.decorator';
+import ProjectEntity from './entities/project.entity';
 
 @ApiTags('Projects')
 @ApiBearerAuth()
@@ -35,7 +39,23 @@ import { PROJECT_NOT_FOUND } from '@constants/errors.constants';
 @SkipThrottle()
 @Controller('projects')
 export class ProjectController {
-  constructor(private readonly projectService: ProjectService) {}
+  constructor(private readonly projectService: ProjectService) { }
+
+  @Get('mine')
+  @ApiOperation({ summary: 'Get projects for logged-in user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Projects retrieved',
+    type: [ProjectBaseEntity],
+  })
+  async getMyProjects(
+    @CaslUser() userProxy: UserProxy<User>,
+    @Query() paginationDTO: ListProjectsDTO,
+  ): Promise<PaginatorTypes.PaginatedResult<Project>> {
+    const user = await userProxy.get();
+    return this.projectService.getMyProjects(user, paginationDTO);
+  }
+
 
   @Get(':projectId')
   @ApiOperation({ summary: 'Find project by ID' })
@@ -159,4 +179,18 @@ export class ProjectController {
   ): Promise<Project> {
     return this.projectService.removeManager(projectId, userId);
   }
+
+  @Get(':projectId/documents')
+  @ApiOperation({ summary: 'Get all documents in a project' })
+  @ApiResponse({
+    status: 200,
+    description: 'Documents retrieved',
+    // type: [DocumentBaseEntity],
+  })
+  async getDocuments(
+    @Param('projectId') projectId: string,
+  ): Promise<File[]> {
+    return this.projectService.getDocuments(projectId);
+  }
+
 }

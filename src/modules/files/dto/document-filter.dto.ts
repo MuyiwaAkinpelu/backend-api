@@ -8,6 +8,7 @@ import {
   IsEnum,
   ValidateIf,
 } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ApprovalStatus, DocumentVisibility } from '@prisma/client';
 
@@ -42,10 +43,11 @@ export class DocumentFiltersDTO {
   })
   @IsOptional()
   @IsEnum(ApprovalStatus)
-  approvalStatus?: ApprovalStatus = ApprovalStatus.APPROVED;
+  approvalStatus?: ApprovalStatus;
 
   @IsOptional()
   @IsInt()
+  @Type(() => Number)
   @ApiPropertyOptional({
     description: 'Filter files by size (greater than or equal)',
     required: false,
@@ -54,6 +56,7 @@ export class DocumentFiltersDTO {
 
   @IsOptional()
   @IsInt()
+  @Type(() => Number)
   @ApiPropertyOptional({
     description: 'Filter files by size (less than or equal)',
     required: false,
@@ -61,12 +64,19 @@ export class DocumentFiltersDTO {
   sizeMax?: number;
 
   @IsOptional()
-  @IsString()
+  @IsArray()
+  @IsString({ each: true })
   @ApiPropertyOptional({
     description: 'Filter files by type (e.g., image, document)',
     required: false,
+    type: [String],
   })
-  fileType?: string;
+  @ValidateIf((obj) => obj.fileType !== undefined)
+  @Transform(({ value }) => {
+    if (typeof value === 'string') return [value];
+    return value;
+  })
+  fileType?: string[];
 
   @IsOptional()
   @IsDateString()
@@ -96,12 +106,19 @@ export class DocumentFiltersDTO {
   tags?: string[];
 
   @IsOptional()
-  @IsString()
+  @IsArray()
+  @IsString({ each: true })
   @ApiPropertyOptional({
     description: 'Filter files by MIME type',
     required: false,
+    type: [String],
   })
-  contentType?: string;
+  @ValidateIf((obj) => obj.contentType !== undefined)
+  @Transform(({ value }) => {
+    if (typeof value === 'string') return [value];
+    return value;
+  })
+  contentType?: string[];
 
   @IsOptional()
   @IsString()

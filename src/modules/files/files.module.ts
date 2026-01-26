@@ -6,15 +6,19 @@ import { APP_GUARD } from '@nestjs/core';
 import { UPLOAD_RATE_LIMIT, UPLOAD_RATE_TTL } from '@constants/env.constants';
 import { DocumentController } from './document.controller';
 import { DocumentService } from './document.service';
-import { SearchService } from '@modules/search/search.service';
+
+import { SearchModule } from '@modules/search/search.module';
 import { PrismaModule } from '@providers/prisma';
 import { FileRepository } from './file.repository';
 import { ApprovalRequestRepository } from '../project/approval-request.repository';
 import { UserRepository } from '@modules/user/user.repository';
 import { ProjectRepository } from '@modules/project/project.repository';
+import { CaslModule } from '@modules/casl';
+import { permissions } from './files.permissions';
 
 @Module({
   imports: [
+    SearchModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -26,6 +30,8 @@ import { ProjectRepository } from '@modules/project/project.repository';
       ],
     }),
     PrismaModule,
+    SearchModule,
+    CaslModule.forFeature({ permissions }),
   ],
   controllers: [DocumentController],
   providers: [
@@ -39,11 +45,7 @@ import { ProjectRepository } from '@modules/project/project.repository';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    {
-      provide: 'SearchServiceInterface',
-      useClass: SearchService,
-    },
-    SearchService,
+
   ],
 })
-export class FilesModule {}
+export class FilesModule { }

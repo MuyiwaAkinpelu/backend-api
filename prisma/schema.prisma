@@ -8,25 +8,26 @@ datasource db {
 }
 
 model User {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  email       String    @unique
-  phone       String?
-  firstName   String?
-  lastName    String?
-  password    String
-  avatar      String?
-  roles       Roles[]   @default([GUEST])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @default(now())
-  lastLogin   DateTime?
-  isVerified  Boolean?  @default(false)
-  isActive    Boolean?  @default(false)
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  email     String  @unique
+  phone     String?
+  firstName String?
+  lastName  String?
+  password  String
+  avatar    String?
+  roles     Roles[] @default([GUEST])
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @default(now())
+  lastLogin  DateTime?
+  isVerified Boolean?  @default(false)
+  isActive   Boolean?  @default(false)
+
   department  String?
   designation String?
 
-  filesUploaded File[] @relation("UploadedDocuments") // files you uploaded
-
-  fileSharedIDs String[] @db.ObjectId // files shared with you
+  filesUploaded File[]   @relation("UploadedDocuments")
+  fileSharedIDs String[] @db.ObjectId
   filesShared   File[]   @relation(fields: [fileSharedIDs], references: [id])
 
   submittedRequests    ApprovalRequest[] @relation("SubmittedRequests")
@@ -36,12 +37,14 @@ model User {
   createdProjects Project[] @relation("ProjectCreatedBy")
   updatedProjects Project[] @relation("ProjectUpdatedBy")
 
-  projectMemberProjectIDs  String[]  @db.ObjectId
-  projectMemberProjects    Project[] @relation(fields: [projectMemberProjectIDs], references: [id], name: "ProjectMemberProjects")
-  projectManagerProjectIDs String[]  @db.ObjectId
-  projectManagerProjects   Project[] @relation(fields: [projectMemberProjectIDs], references: [id], name: "ProjectManagerProjects")
+  projectMemberProjectIDs String[]  @db.ObjectId
+  projectMemberProjects   Project[] @relation(fields: [projectMemberProjectIDs], references: [id], name: "ProjectMemberProjects")
 
-  tokens Token[]
+  projectManagerProjectIDs String[]  @db.ObjectId
+  projectManagerProjects   Project[] @relation(fields: [projectManagerProjectIDs], references: [id], name: "ProjectManagerProjects")
+
+  tokens       Token[]
+  activityLogs ActivityLog[]
 }
 
 model TokenWhiteList {
@@ -51,8 +54,9 @@ model TokenWhiteList {
   refreshToken   String?
   refreshTokenId String?
   expiredAt      DateTime
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
 }
 
 enum Roles {
@@ -76,49 +80,70 @@ enum DocumentVisibility {
 }
 
 model File {
-  id       String  @id @default(auto()) @map("_id") @db.ObjectId
-  filename String?
-  path     String
-
-  uploader   User?   @relation(fields: [uploaderId], references: [id], "UploadedDocuments", onDelete: SetNull)
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  filename   String?
+  path       String
   uploaderId String? @db.ObjectId
+  uploader   User?   @relation(fields: [uploaderId], references: [id], "UploadedDocuments", onDelete: SetNull)
 
-  visibility       DocumentVisibility @default(PRIVATE)
-  size             Int // File size in bytes
-  fileType         String? // Type of file (e.g., image, document)
-  uploadDate       DateTime           @default(now()) // Date when the file was uploaded
-  description      String?
-  tags             String[] // Tags or keywords associated with the file
-  originalFilename String // Original filename of the uploaded file
-  contentType      String // MIME type of the file
+  visibility  DocumentVisibility @default(PRIVATE)
+  size        Int // File size in bytes
+  fileType    String? // File type (e.g., "image", "document")
+  uploadDate  DateTime           @default(now()) // Date and time when the file was uploaded
+  description String?
+  filenameKeywords String[]
+  tags        String[] // Tags associated with the file
+
+  originalFilename String
+  contentType      String
 
   approvalRequests ApprovalRequest[]
-  sharedWithIDs    String[]          @db.ObjectId
-  sharedWith       User[]            @relation(fields: [sharedWithIDs], references: [id])
+
+  sharedWithIDs String[] @db.ObjectId
+  sharedWith    User[]   @relation(fields: [sharedWithIDs], references: [id])
 
   projectsIDs String[]  @db.ObjectId
-  projects    Project[] @relation("ProjectDocuments", fields: [projectsIDs], references: [id])
+  projects    Project[] @relation(name: "ProjectDocuments", fields: [projectsIDs], references: [id])
+
+  views     Int @default(0)
+  downloads Int @default(0)
+
+  @@index([projectsIDs])
+  @@index([uploadDate])
+  @@index([views])
+  @@index([downloads])
+  @@index([uploaderId])
 }
 
 model ApprovalRequest {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
-  status        ApprovalStatus @default(PENDING)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  documentId    String         @db.ObjectId
-  document      File           @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  projectId     String         @db.ObjectId
-  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  submittedById String?        @db.ObjectId
-  submittedBy   User?          @relation("SubmittedRequests", fields: [submittedById], references: [id])
+  id     String         @id @default(auto()) @map("_id") @db.ObjectId
+  status ApprovalStatus @default(PENDING)
 
-  disapprovalReason String? // Reason for disapproval, if applicable
-  approvedById      String? @db.ObjectId
-  approvedBy        User?   @relation("ApprovedRequests", fields: [approvedById], references: [id])
-  disapprovedById   String? @db.ObjectId
-  disapprovedBy     User?   @relation("DisapprovedRequests", fields: [disapprovedById], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  documentId String @db.ObjectId
+  document   File   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  projectId String  @db.ObjectId
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  submittedById String? @db.ObjectId
+  submittedBy   User?   @relation("SubmittedRequests", fields: [submittedById], references: [id])
+
+  approvedById String? @db.ObjectId
+  approvedBy   User?   @relation("ApprovedRequests", fields: [approvedById], references: [id])
+
+  disapprovedById String? @db.ObjectId
+  disapprovedBy   User?   @relation("DisapprovedRequests", fields: [disapprovedById], references: [id])
+
+  disapprovalReason String?
 
   @@index([documentId, projectId])
+  @@index([projectId, status])
+  @@index([status])
+  @@index([createdAt])
+  @@index([submittedById])
 }
 
 enum ApprovalStatus {
@@ -128,39 +153,160 @@ enum ApprovalStatus {
 }
 
 model Token {
-  id        String       @id @default(auto()) @map("_id") @db.ObjectId
-  owner     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String       @db.ObjectId
-  code      String
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  expiresAt DateTime     @db.Timestamp()
-  useCase   TokenUseCase
-  type      TokenType    @default(value: OTP)
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  owner  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  code    String
+  useCase TokenUseCase
+  type    TokenType    @default(OTP)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime @db.Timestamp()
 }
 
 model Project {
   id          String          @id @default(auto()) @map("_id") @db.ObjectId
   name        String
-  category    ProjectCategory @default(value: SCIDAR)
+  category    ProjectCategory @default(SCIDAR)
   description String?
-  tags        String[] // Tags or keywords associated with the projects
+  tags        String[]
+  status      Status          @default(ACTIVE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   createdByUserId String? @db.ObjectId
   createdBy       User?   @relation(fields: [createdByUserId], references: [id], name: "ProjectCreatedBy", onDelete: SetNull)
+
   updatedByUserId String? @db.ObjectId
   updatedBy       User?   @relation(fields: [updatedByUserId], references: [id], name: "ProjectUpdatedBy", onDelete: SetNull)
 
-  membersIDs       String[]          @db.ObjectId
-  members          User[]            @relation(fields: [membersIDs], references: [id], name: "ProjectMemberProjects")
-  managersIDs      String[]          @db.ObjectId
-  managers         User[]            @relation(fields: [managersIDs], references: [id], name: "ProjectManagerProjects")
-  approvalRequests ApprovalRequest[]
-  documentsIDs     String[]          @db.ObjectId
-  documents        File[]            @relation(fields: [documentsIDs], references: [id], name: "ProjectDocuments")
+  membersIDs String[] @db.ObjectId
+  members    User[]   @relation(fields: [membersIDs], references: [id], name: "ProjectMemberProjects")
+
+  managersIDs String[] @db.ObjectId
+  managers    User[]   @relation(fields: [managersIDs], references: [id], name: "ProjectManagerProjects")
+
+  documentsIDs String[] @db.ObjectId
+  documents    File[]   @relation(fields: [documentsIDs], references: [id], name: "ProjectDocuments")
+
+  approvalRequests     ApprovalRequest[]
+  projectDocumentStats ProjectDocumentStat[]
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum ActivityVerb {
+  CREATE
+  UPDATE
+  DELETE
+  VIEW
+  DOWNLOAD
+  LOGIN
+  LOGOUT
+  SHARE
+  APPROVE
+  DECLINE
+}
+
+enum ActivityEntity {
+  FILE
+  PROJECT
+  USER
+  APPROVAL
+  AUTH
+}
+
+enum ActivityOutcome {
+  SUCCESS
+  FAILURE
+}
+
+model ActivityLog {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String? @db.ObjectId
+  user   User?   @relation(fields: [userId], references: [id])
+
+  verb     ActivityVerb
+  entity   ActivityEntity
+  entityId String?        @db.ObjectId
+  metadata Json?
+
+  outcome        ActivityOutcome?
+  securityEvent  SecurityEventType?
+
+  ip         String?
+  userAgent  String?
+  occurredAt DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([verb])
+  @@index([entity])
+  @@index([verb, entity])
+  @@index([entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([occurredAt])
+}
+
+model DailyUploadStat {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  date      DateTime @unique
+  uploads   Int      @default(0)
+  totalSize Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserActivityDaily {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  date       DateTime
+  userId     String   @db.ObjectId
+  actions    Int      @default(0)
+  lastAction DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date], name: "UserActivityDaily_userId_date")
+  @@index([date])
+}
+
+model ProjectDocumentStat {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  projectId String  @unique @db.ObjectId
+  project   Project @relation(fields: [projectId], references: [id])
+
+  documentCount Int       @default(0)
+  totalViews    Int       @default(0)
+  totalUploads  Int       @default(0)
+  lastActivity  DateTime?
+
+  updatedAt DateTime @updatedAt
+}
+
+model SecurityEventStat {
+  id        String            @id @default(auto()) @map("_id") @db.ObjectId
+  occurredAt      DateTime
+  eventType SecurityEventType
+  count     Int               @default(0)
+  outcome   ActivityOutcome?  @default(SUCCESS)
+
+  createdAt DateTime @default(now())
+
+  @@unique([occurredAt, eventType], name: "SecurityEventStat_date_eventType")
+}
+
+enum SecurityEventType {
+  FAILED_LOGIN
+  UNAUTHORIZED_ACCESS
+  PASSWORD_RESET
+  ROLE_CHANGE
 }
 
 enum TokenUseCase {

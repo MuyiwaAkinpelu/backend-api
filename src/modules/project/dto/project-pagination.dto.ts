@@ -18,10 +18,10 @@ export class ProjectsPaginationDTO {
   @IsEnum(ProjectSortableColumns)
   sortBy?: ProjectSortableColumns = ProjectSortableColumns.CREATED_AT;
 
-  @ApiPropertyOptional({ enum: Order, default: Order.ASC })
+  @ApiPropertyOptional({ enum: Order, default: Order.DESC })
   @IsEnum(Order)
   @IsOptional()
-  readonly order?: Order = Order.ASC;
+  readonly order?: Order = Order.DESC;
 
   @ApiPropertyOptional({
     minimum: 1,
@@ -45,7 +45,7 @@ export class ProjectsPaginationDTO {
   @Min(1)
   @Max(200)
   @IsOptional()
-  readonly limit?: number = 10;
+  readonly limit?: number;
 
   get skip(): number {
     return (this.page - 1) * this.limit;

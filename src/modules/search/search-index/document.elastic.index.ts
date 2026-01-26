@@ -44,15 +44,51 @@ export class DocumentElasticIndex {
     };
   }
 
-  private fileDocument(file: File): any {
-    const bulk = [];
-    bulk.push({
-      index: this.bulkIndex(file.id),
-    });
-    bulk.push(file);
+  // private fileDocument(file: File): any {
+  //   const bulk = [];
+  //   bulk.push({
+  //     index: this.bulkIndex(file.id),
+  //   });
+  //   bulk.push(file);
+  //   return {
+  //     body: bulk,
+  //     index: documentIndex._index,
+  //   };
+  // }
+
+  private fileDocument(file: File | FileWithContent): any[] {
+    return [
+      { index: { _index: documentIndex._index, _id: file.id } },
+      {
+        originalFilename: file.originalFilename,
+        visibility: file.visibility,
+        path: file.path,
+        uploaderId: file.uploaderId,
+        contentType: file.contentType,
+        fileType: file.fileType,
+        createdAt: file.uploadDate,
+        tags: file.tags,
+        description: file.description,
+      },
+    ];
+  }
+
+  public async syncAllDocuments(files: File[]): Promise<any> {
+    const bulkOps: any[] = [];
+
+    for (const file of files) {
+      bulkOps.push(...this.fileDocument(file));
+    }
+
+    if (bulkOps.length === 0) {
+      return { indexed: 0, message: 'No documents to sync' };
+    }
+
+    const result = await this.searchService.insertIndex(bulkOps);
     return {
-      body: bulk,
-      index: documentIndex._index,
+      indexed: files.length,
+      message: `Successfully synced ${files.length} documents`,
+      result,
     };
   }
 }

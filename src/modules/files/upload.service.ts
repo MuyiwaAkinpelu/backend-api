@@ -13,7 +13,8 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as officeParser from 'officeparser';
 import { Readable } from 'stream';
-import { ApprovalStatus, Roles } from '@prisma/client';
+import { ApprovalStatus, Roles, DocumentVisibility } from '@prisma/client';
+import { SearchService } from '@modules/search/search.service';
 
 @Injectable()
 export class UploadService {
@@ -24,13 +25,15 @@ export class UploadService {
     @Inject(ConfigService) private readonly configService: ConfigService,
     @Inject(forwardRef(() => PrismaService))
     private readonly prisma: PrismaService,
+
+    private readonly searchService: SearchService,
   ) {
     this.s3Client = new S3Client({
       region: this.configService.getOrThrow(AWS_S3_REGION),
     });
     this.bucketUrl =
       this.configService.get(AWS_S3_ENDPOINT) ||
-      this.configService.get(AWS_S3_BUCKET)
+        this.configService.get(AWS_S3_BUCKET)
         ? `https://${this.configService.get(AWS_S3_BUCKET)}.s3.amazonaws.com`
         : 'https://scidar-drs-uploads.s3.amazonaws.com';
   }
@@ -85,6 +88,7 @@ export class UploadService {
           originalFilename: file.originalname,
           fileUrl,
           contentType: file.mimetype,
+          fileType: extension.replace('.', ''),
           size: file.size,
           tags,
           uploaderId,
@@ -108,18 +112,20 @@ export class UploadService {
     originalFilename,
     fileUrl,
     contentType,
+    fileType,
     size,
     tags,
     uploaderId,
     userRoles,
     projectId,
-  }: SaveFileToDBParams) {
+  }: SaveFileToDBParams & { fileType: string }) {
     // Save file details to the database using Prisma
     const savedFile = await this.prisma.file.create({
       data: {
         filename: fileName,
         originalFilename,
         path: fileUrl,
+        fileType,
         uploader: {
           connect: {
             id: uploaderId,
@@ -128,31 +134,33 @@ export class UploadService {
         contentType,
         size,
         tags,
-        ...(userRoles.includes(Roles.SYSTEM_ADMIN) &&
+        ...(userRoles.some(role => role === Roles.SYSTEM_ADMIN || role === Roles.MANAGEMENT_STAFF) &&
           projectId && {
-            approvalRequests: {
-              create: {
-                approvedBy: {
-                  connect: {
-                    id: uploaderId,
-                  },
+          approvalRequests: {
+            create: {
+              approvedBy: {
+                connect: {
+                  id: uploaderId,
                 },
-                project: {
-                  connect: {
-                    id: projectId,
-                  },
+              },
+              project: {
+                connect: {
+                  id: projectId,
                 },
-                status: ApprovalStatus.APPROVED,
               },
+              status: ApprovalStatus.APPROVED,
             },
-            projects: {
-              connect: {
-                id: projectId,
-              },
+          },
+          projects: {
+            connect: {
+              id: projectId,
             },
-          }),
+          },
+        }),
       },
     });
+
+    return savedFile;
 
     return savedFile;
   }
@@ -207,4 +215,11 @@ export class UploadService {
 
     return response.Body as Readable;
   }
+
+  // async incrementDownloadCount(documentId: string) {
+  //   return this.prisma.file.update({
+  //     where: { id: documentId },
+  //     data: { downloads: { increment: 1 } },
+  //   });
+  // }
 }

@@ -3,9 +3,9 @@ export interface SearchServiceInterface<T> {
 
   updateIndex(updateData: T): Promise<T>;
 
-  searchIndex(searchData: T): Promise<T>;
-
-  deleteIndex(indexData: T): Promise<T>;
+  searchIndex(searchData: any): Promise<any>;
+  suggest(suggestData: any): Promise<any>;
+  deleteIndex(indexData: any): Promise<any>;
 
   deleteDocument(indexData: T): Promise<T>;
 }

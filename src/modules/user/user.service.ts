@@ -8,7 +8,7 @@ import { ListUsersDTO } from './dto/users.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(private readonly userRepository: UserRepository) { }
 
   async findById(id: string): Promise<User> {
     const user = await this.userRepository.findById(id);
@@ -37,6 +37,8 @@ export class UserService {
         isVerified: true,
         isActive: true,
         roles: true,
+        projectMemberProjects: { select: { id: true, name: true, category: true } },
+        projectManagerProjects: { select: { id: true, name: true, category: true } },
       },
     });
   }
@@ -52,7 +54,10 @@ export class UserService {
     const { page, limit, sortBy, order, ...filters } = projectsDTO;
 
     const where: Prisma.UserWhereInput = this.buildWhereClause(filters);
-    const include: Prisma.UserInclude = undefined;
+    const include: Prisma.UserInclude = {
+      projectMemberProjects: { select: { id: true, name: true, category: true } },
+      projectManagerProjects: { select: { id: true, name: true, category: true } },
+    };
 
     const paginationOptions: PaginatorTypes.PaginateOptions = {
       page,
@@ -162,11 +167,11 @@ export class UserService {
     const where: Prisma.UserWhereInput = {};
 
     if (filters) {
-      if (filters.createdAfter) {
-        where.createdAt = { gte: new Date(filters.createdAfter) };
-      }
-      if (filters.createdBefore) {
-        where.createdAt = { lte: new Date(filters.createdBefore) };
+      if (filters.createdAfter || filters.createdBefore) {
+        where.createdAt = {
+          ...(filters.createdAfter && { gte: new Date(filters.createdAfter) }),
+          ...(filters.createdBefore && { lte: new Date(filters.createdBefore) }),
+        };
       }
       if (filters.role) {
         where.roles = { has: filters.role };

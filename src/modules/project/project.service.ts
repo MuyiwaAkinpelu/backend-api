@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProjectRepository } from './project.repository';
-import { Project, Prisma } from '@prisma/client';
+import { Project, Prisma, User } from '@prisma/client';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { PROJECT_NOT_FOUND } from '@constants/errors.constants';
 import { ProjectFiltersDTO } from './dto/project-filters.dto';
@@ -10,7 +10,7 @@ import { UpdateProjectDTO } from './dto/update-project.dto';
 
 @Injectable()
 export class ProjectService {
-  constructor(private readonly projectRepository: ProjectRepository) {}
+  constructor(private readonly projectRepository: ProjectRepository) { }
 
   async findById(id: string): Promise<Project> {
     const project = await this.projectRepository.findById(id);
@@ -113,6 +113,12 @@ export class ProjectService {
   }
 
   async delete(id: string): Promise<Project> {
+    await this.findById(id);
+
+    // Clean up references in User documents
+    // We update all users who have this project ID in their arrays
+    await this.projectRepository.removeProjectFromUsers(id);
+
     return this.projectRepository.deleteProject(id);
   }
 
@@ -152,6 +158,72 @@ export class ProjectService {
     });
   }
 
+  async getMyProjects(
+    user: User,
+    projectsDTO: ListProjectsDTO,
+  ): Promise<PaginatorTypes.PaginatedResult<Project>> {
+    const { page, limit, sortBy, order, ...filters } = projectsDTO;
+
+    const where: Prisma.ProjectWhereInput = {
+      AND: [
+        this.buildWhereClause(filters),
+        {
+          OR: [
+            { membersIDs: { has: user.id } },
+            { managersIDs: { has: user.id } },
+          ],
+        },
+      ]
+    };
+
+    const include: Prisma.ProjectInclude = {
+      managers: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatar: true,
+        },
+      },
+      members: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          avatar: true,
+        },
+      },
+    };
+
+    const paginationOptions: PaginatorTypes.PaginateOptions = {
+      page,
+      perPage: limit,
+    };
+
+    const sortByColumn: Prisma.ProjectOrderByWithRelationInput = {
+      [sortBy]: order,
+    };
+
+    return this.projectRepository.findAll(
+      where,
+      include,
+      sortByColumn,
+      paginationOptions,
+    );
+  }
+
+  async getDocuments(projectId: string): Promise<any[]> {
+    const project = await this.projectRepository.findById(projectId, {
+      documents: true,
+    });
+    if (!project) {
+      throw new NotFoundException(PROJECT_NOT_FOUND);
+    }
+
+    // @ts-ignore
+    return project.documents || [];
+  }
+
   private buildWhereClause(filters: ProjectFiltersDTO) {
     const where: Prisma.ProjectWhereInput = {};
 
@@ -165,11 +237,11 @@ export class ProjectService {
       if (filters.createdBy) {
         where.createdByUserId = filters.createdBy;
       }
-      if (filters.createdAfter) {
-        where.createdAt = { gte: new Date(filters.createdAfter) };
-      }
-      if (filters.createdBefore) {
-        where.createdAt = { lte: new Date(filters.createdBefore) };
+      if (filters.createdAfter || filters.createdBefore) {
+        where.createdAt = {
+          ...(filters.createdAfter && { gte: new Date(filters.createdAfter) }),
+          ...(filters.createdBefore && { lte: new Date(filters.createdBefore) }),
+        };
       }
       if (filters.tags) {
         where.tags = { hasSome: filters.tags };

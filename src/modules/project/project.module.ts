@@ -7,8 +7,11 @@ import { ApprovalRequestService } from './approval-request.service';
 import { ApprovalRequestRepository } from './approval-request.repository';
 import { FileRepository } from '@modules/files/file.repository';
 import { UserRepository } from '@modules/user/user.repository';
+import { CaslModule } from '@modules/casl';
+import { permissions } from './project.permissions';
 
 @Module({
+  imports: [CaslModule.forFeature({ permissions })],
   providers: [
     ProjectService,
     ApprovalRequestService,
@@ -20,4 +23,4 @@ import { UserRepository } from '@modules/user/user.repository';
   controllers: [ProjectController, ApprovalRequestController],
   exports: [ProjectRepository, ApprovalRequestRepository],
 })
-export class ProjectModule {}
+export class ProjectModule { }

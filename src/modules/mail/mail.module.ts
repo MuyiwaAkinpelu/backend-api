@@ -12,10 +12,14 @@ import {
 import { MailService } from '@modules/mail/services/mail.service';
 import { MailController } from './controllers/mail.controller';
 
+import { CaslModule } from '@modules/casl';
+import { permissions } from './mail.permissions';
+
 @Global() // 👈 global module
 @Module({
   imports: [
     ConfigModule,
+    CaslModule.forFeature({ permissions }),
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
@@ -47,4 +51,4 @@ import { MailController } from './controllers/mail.controller';
   providers: [MailService],
   exports: [MailService],
 })
-export class MailModule {}
+export class MailModule { }

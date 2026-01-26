@@ -33,7 +33,7 @@ export class ApprovalRequestService {
     private readonly userRepository: UserRepository,
     private readonly projectRepository: ProjectRepository,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async findById(id: string): Promise<ApprovalRequest> {
     const approvalRequest = await this.approvalRequestRepository.findById(id);
@@ -239,10 +239,8 @@ export class ApprovalRequestService {
       this.buildWhereClause(filters);
 
     where.project = {
-      managers: {
-        some: {
-          id: userId,
-        },
+      managersIDs: {
+        has: userId,
       },
     };
 

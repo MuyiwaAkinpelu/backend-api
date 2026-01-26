@@ -59,7 +59,7 @@ export class RequestsFiltersDTO {
   })
   @IsOptional()
   @IsEnum(ApprovalStatus)
-  status?: ApprovalStatus = ApprovalStatus.APPROVED;
+  status?: ApprovalStatus = ApprovalStatus.PENDING;
 
   @IsOptional()
   @IsDateString()

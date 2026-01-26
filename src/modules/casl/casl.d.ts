@@ -8,5 +8,5 @@ declare namespace Casl {
   };
   export declare type AnyObject = Record<PropertyKey, unknown>;
   export declare type SubjectType = string | SubjectClass;
-  export declare type Subject = AnyRecord | SubjectType;
+  export declare type Subject = AnyObject | SubjectType;
 }

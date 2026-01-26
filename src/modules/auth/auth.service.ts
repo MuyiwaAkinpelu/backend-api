@@ -13,13 +13,15 @@ import {
   MFA_PHONE_OR_TOKEN_REQUIRED,
   USER_CONFLICT,
 } from '@constants/errors.constants';
-import { TokenUseCase, User } from '@prisma/client';
+import { ActivityEntity, ActivityVerb, SecurityEventType, TokenUseCase, User } from '@prisma/client';
 import { SignInDto } from '@modules/auth/dto/sign-in.dto';
 import { AuthTokenService } from '@modules/auth/auth-token.service';
 import { RedisService } from './redis.service';
 import { MailService } from '@modules/mail/services/mail.service';
 import { TokenService } from './token.service';
 import { PasswordResetService } from './password-reset.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ActivityLogEvent } from '@modules/activity-logs/constants';
 
 @Injectable()
 export class AuthService {
@@ -32,7 +34,8 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly tokenService: TokenService,
     private readonly passwordResetService: PasswordResetService,
-  ) {}
+    private readonly eventEmitter: EventEmitter2,
+  ) { }
 
   /**
    * DEPRECATED
@@ -97,15 +100,42 @@ export class AuthService {
   async signIn(
     signInDto: SignInDto,
     deviceIp: string,
+    userAgent?: string,
   ): Promise<Auth.AccessRefreshTokens> {
     const testUser = await this.getUserByEmail(signInDto.email);
 
     if (!testUser) {
+      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+        userId: undefined,
+        verb: ActivityVerb.LOGIN,
+        entity: ActivityEntity.AUTH,
+        metadata: {
+          outcome: 'FAILURE',
+          reason: 'USER_NOT_FOUND',
+          securityEvent: SecurityEventType.FAILED_LOGIN,
+        },
+        ip: deviceIp,
+        userAgent,
+        occurredAt: new Date(),
+      });
       // 401001: Invalid credentials
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
     if (!testUser.isActive) {
+      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+        userId: undefined,
+        verb: ActivityVerb.LOGIN,
+        entity: ActivityEntity.AUTH,
+        metadata: {
+          outcome: 'FAILURE',
+          reason: 'USER_NOT_ACTIVE',
+          securityEvent: SecurityEventType.FAILED_LOGIN,
+        },
+        ip: deviceIp,
+        userAgent,
+        occurredAt: new Date(),
+      });
       throw new UnauthorizedException(ACCOUNT_NOT_ACTIVE);
     }
 
@@ -115,6 +145,20 @@ export class AuthService {
         testUser.password,
       ))
     ) {
+
+      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+        userId: undefined,
+        verb: ActivityVerb.LOGIN,
+        entity: ActivityEntity.AUTH,
+        metadata: {
+          outcome: 'FAILURE',
+          reason: 'INVALID_PASSWORD',
+          securityEvent: SecurityEventType.FAILED_LOGIN,
+        },
+        ip: deviceIp,
+        userAgent,
+        occurredAt: new Date(),
+      });
       // 401001: Invalid credentials
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
@@ -143,6 +187,20 @@ export class AuthService {
     // update lastLogin date
     await this.userRepository.updateUser(testUser.id, {
       lastLogin: new Date(),
+    });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: testUser.id,
+      verb: ActivityVerb.LOGIN,
+      entity: ActivityEntity.AUTH,
+      metadata: {
+        outcome: 'SUCCESS',
+        reason: 'SUCCESS',
+        // securityEvent: SecurityEventType.SUCCESSFUL_LOGIN,
+      },
+      ip: deviceIp,
+      userAgent,
+      occurredAt: new Date(),
     });
 
     return this.sign(testUser, deviceIp);

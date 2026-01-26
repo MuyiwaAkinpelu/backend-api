@@ -18,7 +18,7 @@ export class AuthGuard implements CanActivate {
     private readonly configService: ConfigService,
     private readonly authTokenService: AuthTokenService,
     private reflector: Reflector,
-  ) {}
+  ) { }
 
   /**
    * @desc Check if user is authenticated
@@ -37,7 +37,19 @@ export class AuthGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
     if (isSkipAuth) {
-      // 💡 See this condition
+      if (token) {
+        try {
+          await this.authTokenService.getAccessTokenFromWhitelist(token);
+          request['user'] = await this.jwtService.verifyAsync(token, {
+            secret: this.configService.get<string>('jwt.accessToken'),
+          });
+          request['user']._meta = {
+            accessToken: token,
+          };
+        } catch (e) {
+          // Ignore error for skip auth
+        }
+      }
       return true;
     }
 

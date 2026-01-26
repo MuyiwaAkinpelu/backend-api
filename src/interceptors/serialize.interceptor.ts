@@ -8,8 +8,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { getSerializeType } from '@decorators/serialize.decorator';
 
-const getSerializer = (Entity: any) => (data: any) =>
-  Object.assign(new Entity(), data);
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class SerializeInterceptor implements NestInterceptor {
@@ -21,12 +20,13 @@ export class SerializeInterceptor implements NestInterceptor {
         }
 
         const SerializeType = getSerializeType(context.getHandler());
-        const serializer = getSerializer(SerializeType);
+        const serializer = (data: any) =>
+          plainToInstance(SerializeType, data, {
+            excludeExtraneousValues: true,
+          });
 
         function serialize(data: any) {
-          return data instanceof Array
-            ? data.map(serializer)
-            : serializer(data);
+          return serializer(data);
         }
 
         if (value.meta) {

@@ -23,13 +23,20 @@ import { RedisService } from '@modules/auth/redis.service';
 import { MailModule } from '@modules/mail/mail.module';
 import { FilesModule } from '@modules/files/files.module';
 import { ProjectModule } from '@modules/project/project.module';
+import { AnalyticsModule } from '@modules/analytics/analytics.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   controllers: [],
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [appConfig, swaggerConfig, jwtConfig, s3Config, sqsConfig],
+    }),
+    EventEmitterModule.forRoot({
+      wildcard: true,
     }),
     RedisModule.forRootAsync({
       imports: [ConfigModule],
@@ -37,10 +44,12 @@ import { ProjectModule } from '@modules/project/project.module';
       useFactory: async (configService: ConfigService) => ({
         config: {
           password: configService.getOrThrow<string>(REDIS_PASS),
-          tls: {
-            host: configService.getOrThrow<string>(REDIS_HOST),
-            port: +configService.get<number>(REDIS_PORT),
-          },
+          host: configService.getOrThrow<string>(REDIS_HOST),
+          port: +configService.get<number>(REDIS_PORT),
+          // tls: {
+          //   host: configService.getOrThrow<string>(REDIS_HOST),
+          //   port: +configService.get<number>(REDIS_PORT),
+          // },
         },
       }),
     }),
@@ -63,6 +72,7 @@ import { ProjectModule } from '@modules/project/project.module';
     MailModule,
     FilesModule,
     ProjectModule,
+    AnalyticsModule,
   ],
   providers: [
     AuthTokenService,
@@ -75,4 +85,4 @@ import { ProjectModule } from '@modules/project/project.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

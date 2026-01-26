@@ -10,6 +10,7 @@ import { Injectable, Inject, Logger, forwardRef } from '@nestjs/common';
 import { DocumentElasticIndex } from '@modules/search/search-index/document.elastic.index';
 import { MailService } from '@modules/mail/services/mail.service';
 import { UploadService } from '@modules/files/upload.service';
+import { extractKeywords, extractDescription } from 'src/common/utils';
 
 @Injectable()
 export class PrismaMiddleware {
@@ -23,6 +24,7 @@ export class PrismaMiddleware {
     private readonly mailService: MailService,
   ) {
     this.logger = new Logger(PrismaMiddleware.name);
+    this.logger.log(`PrismaMiddleware initialized. IS_SEEDING: ${process.env.IS_SEEDING}`);
   }
 
   createFileMiddleware(): Prisma.Middleware {
@@ -30,15 +32,35 @@ export class PrismaMiddleware {
       const result: File = await next(params);
 
       if (params.model === 'File' && params.action === 'create') {
+        const isSeeding = process.env.IS_SEEDING === 'true';
+        if (isSeeding) return result;
         try {
           const content = await this.uploadService.extractTextFromFile(
             result.filename,
             result.contentType,
           );
+
+          const description = extractDescription(content);
+
+          const filenameKeywords = extractKeywords(result.originalFilename);
+
+          this.prisma.file
+            .update({
+              where: { id: result.id },
+              data: {
+                description,
+                filenameKeywords,
+              },
+            })
+            .catch((err) =>
+              this.logger.error('Failed to save description/keywords', err),
+            );
+
           // removed await so that document will be indexed asynchronously
           this.documentESIndex.insertFileDocument({
             ...result,
             content,
+            filenameKeywords,
           });
         } catch (error) {
           this.logger.error(error);
@@ -55,6 +77,9 @@ export class PrismaMiddleware {
 
       if (params.model === 'File' && params.action === 'update') {
         try {
+          if (process.env.IS_SEEDING === 'true') {
+            return result;
+          }
           const content = await this.uploadService.extractTextFromFile(
             result.filename,
             result.contentType,
@@ -78,6 +103,9 @@ export class PrismaMiddleware {
 
       if (params.model === 'File' && params.action === 'delete') {
         try {
+          if (process.env.IS_SEEDING === 'true') {
+            return result;
+          }
           await this.documentESIndex.deleteFileDocument(result);
         } catch (error) {
           this.logger.error(error);
@@ -110,6 +138,9 @@ export class PrismaMiddleware {
         const { project, document, submittedBy } = request;
 
         if (request.project && request.submittedBy && request.document) {
+          if (process.env.IS_SEEDING === 'true') {
+            return result;
+          }
           const managerEmails = request.project.managers.map(
             (manager) => manager.email,
           );
@@ -153,6 +184,9 @@ export class PrismaMiddleware {
           approvalRequestBeforeUpdate.status !== ApprovalStatus.APPROVED &&
           result.status === ApprovalStatus.APPROVED
         ) {
+          if (process.env.IS_SEEDING === 'true') {
+            return result;
+          }
           if (document && submittedBy) {
             try {
               this.mailService.sendApprovalNotification(submittedBy.email, {
@@ -172,6 +206,9 @@ export class PrismaMiddleware {
         ) {
           const { submittedBy, project, disapprovalReason } = request;
 
+          if (process.env.IS_SEEDING === 'true') {
+            return result;
+          }
           if (document && submittedBy) {
             try {
               this.mailService.sendDisapprovalNotification(submittedBy.email, {

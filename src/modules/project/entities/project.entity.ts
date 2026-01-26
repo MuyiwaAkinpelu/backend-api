@@ -1,4 +1,4 @@
-import { Project, ProjectCategory } from '@prisma/client';
+import { Project, ProjectCategory, Status } from '@prisma/client';
 
 export default class ProjectEntity implements Project {
   readonly id!: string;
@@ -10,6 +10,8 @@ export default class ProjectEntity implements Project {
   readonly projectManagers!: string[] | null;
 
   readonly projectMembers!: string[] | null;
+
+  readonly status!: Status;
 
   readonly createdAt!: Date;
 

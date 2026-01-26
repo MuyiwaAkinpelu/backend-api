@@ -1,32 +1,11 @@
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { FileEntity } from './file.entity';
+import ApprovalRequestBaseEntity from '@modules/project/entities/approval-request-base.entity';
+import ProjectBaseEntity from '@modules/project/entities/project-base.entity';
+import UserBaseEntity from '@modules/user/entities/user-base.entity';
 
-export class UserEntity {
-  readonly id!: string;
-  readonly firstName!: string | null;
-  readonly lastName!: string | null;
-  readonly avatar!: string | null;
-}
-
-@Exclude()
-export class UserBaseEntity extends PartialType(UserEntity) {
-  @ApiProperty({ type: String })
-  @Expose()
-  readonly id!: string;
-
-  @ApiProperty({ type: String, nullable: true })
-  @Expose()
-  readonly firstName!: string | null;
-
-  @ApiProperty({ type: String, nullable: true })
-  @Expose()
-  readonly lastName!: string | null;
-
-  @ApiProperty({ type: String, nullable: true })
-  @Expose()
-  readonly avatar!: string | null;
-}
+// Local UserEntity and UserBaseEntity removed in favor of imported module entities
 
 @Exclude()
 export class FileBaseEntity extends PartialType(FileEntity) {
@@ -44,6 +23,7 @@ export class FileBaseEntity extends PartialType(FileEntity) {
 
   @ApiProperty({ type: UserBaseEntity })
   @Expose()
+  @Type(() => UserBaseEntity)
   readonly uploader!: UserBaseEntity;
 
   @ApiProperty({ type: String })
@@ -53,6 +33,12 @@ export class FileBaseEntity extends PartialType(FileEntity) {
   @ApiProperty({ type: Boolean })
   @Expose()
   readonly isApproved!: boolean;
+
+  @ApiProperty({ type: Boolean })
+  @Expose()
+  get isDraft(): boolean {
+    return !this.approvalRequests || this.approvalRequests.length === 0;
+  }
 
   @ApiProperty({ type: Boolean })
   @Expose()
@@ -96,5 +82,24 @@ export class FileBaseEntity extends PartialType(FileEntity) {
 
   @ApiProperty({ type: [UserBaseEntity] })
   @Expose()
+  @Type(() => UserBaseEntity)
   readonly sharedWith!: UserBaseEntity[];
+
+  @ApiProperty({ type: [ApprovalRequestBaseEntity] })
+  @Expose()
+  @Type(() => ApprovalRequestBaseEntity)
+  readonly approvalRequests!: ApprovalRequestBaseEntity[];
+
+  @ApiProperty({ type: [ProjectBaseEntity] })
+  @Expose()
+  @Type(() => ProjectBaseEntity)
+  readonly projects!: ProjectBaseEntity[];
+
+  @ApiProperty({ type: Number })
+  @Expose()
+  readonly views!: number;
+
+  @ApiProperty({ type: [String] })
+  @Expose()
+  readonly filenameKeywords!: string[] | null;
 }

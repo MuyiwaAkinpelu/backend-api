@@ -16,6 +16,7 @@ export enum FileSortableColumns {
   FILENAME = 'filename',
   SIZE = 'size',
   FILE_TYPE = 'fileType',
+  VIEWS = 'views',
 }
 
 export class DocumentsPaginationDTO {
@@ -24,10 +25,10 @@ export class DocumentsPaginationDTO {
   @IsEnum(FileSortableColumns)
   sortBy?: FileSortableColumns = FileSortableColumns.UPLOAD_DATE;
 
-  @ApiPropertyOptional({ enum: Order, default: Order.ASC })
+  @ApiPropertyOptional({ enum: Order, default: Order.DESC })
   @IsEnum(Order)
   @IsOptional()
-  readonly order?: Order = Order.ASC;
+  readonly order?: Order = Order.DESC;
 
   @ApiPropertyOptional({
     minimum: 1,

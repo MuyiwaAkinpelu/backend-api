@@ -1,4 +1,4 @@
-import { File, Roles } from '@prisma/client';
+import { File, Roles, DocumentVisibility } from '@prisma/client';
 
 export interface SaveFileToDBParams {
   fileName: string;

@@ -1,4 +1,4 @@
-import { DynamicModule, Module, Provider } from '@nestjs/common';
+import { DynamicModule, Module, Provider, forwardRef } from '@nestjs/common';
 import {
   PrismaModuleAsyncOptions,
   PrismaModuleOptions,
@@ -8,8 +8,7 @@ import { PRISMA_SERVICE_OPTIONS } from './prisma.constants';
 import { PrismaService } from './prisma.service';
 import { PrismaMiddleware } from './prisma.middleware';
 import { SearchModule } from '@modules/search/search.module';
-import { DocumentElasticIndex } from '@modules/search/search-index/document.elastic.index';
-import { SearchService } from '@modules/search/search.service';
+
 import { DocumentService } from '@modules/files/document.service';
 import { FileRepository } from '@modules/files/file.repository';
 import { ApprovalRequestRepository } from '@modules/project/approval-request.repository';
@@ -25,21 +24,17 @@ import { UploadService } from '@modules/files/upload.service';
     PrismaService,
     PrismaClient,
     PrismaMiddleware,
-    {
-      provide: 'SearchServiceInterface',
-      useClass: SearchService,
-    },
+
     DocumentService,
     UserRepository,
     FileRepository,
     ProjectRepository,
     ApprovalRequestRepository,
-    DocumentElasticIndex,
     MailService,
     UploadService,
   ],
   exports: [PrismaService],
-  imports: [SearchModule, MailModule],
+  imports: [forwardRef(() => SearchModule), MailModule],
 })
 export class PrismaModule {
   static forRoot(options: PrismaModuleOptions = {}): DynamicModule {

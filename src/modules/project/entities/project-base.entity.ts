@@ -1,10 +1,16 @@
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import ProjectEntity from './project.entity';
 import { ProjectCategory } from '@prisma/client';
+import UserBaseEntity from '@modules/user/entities/user-base.entity';
 
 @Exclude()
 export default class ProjectBaseEntity extends PartialType(ProjectEntity) {
+  @ApiProperty({ type: [UserBaseEntity] })
+  @Expose()
+  @Type(() => UserBaseEntity)
+  readonly managers: UserBaseEntity[];
+
   @ApiProperty({ type: String })
   @Expose()
   readonly id: string;

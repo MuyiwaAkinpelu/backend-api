@@ -1,4 +1,4 @@
-import { UserBaseEntity } from './file-base.entity';
+import UserBaseEntity from '@modules/user/entities/user-base.entity';
 
 export class FileEntity {
   readonly id!: string;
@@ -12,6 +12,7 @@ export class FileEntity {
   readonly fileType!: string | null;
   readonly uploadDate!: Date;
   readonly description!: string | null;
+  readonly filenameKeywords!: string[] | null;
   readonly tags!: string[];
   readonly originalFilename!: string;
   readonly contentType!: string;

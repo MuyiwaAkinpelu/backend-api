@@ -1,7 +1,9 @@
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { ApprovalStatus } from '@prisma/client';
 import ApprovalRequestEntity from './approval-request.entity';
+import ProjectBaseEntity from './project-base.entity';
+import UserBaseEntity from '@modules/user/entities/user-base.entity';
 
 @Exclude()
 export default class ApprovalRequestBaseEntity extends PartialType(
@@ -46,4 +48,19 @@ export default class ApprovalRequestBaseEntity extends PartialType(
   @ApiProperty({ type: Date })
   @Expose()
   readonly updatedAt: Date;
+
+  @ApiProperty({ type: ProjectBaseEntity })
+  @Expose()
+  @Type(() => ProjectBaseEntity)
+  readonly project: ProjectBaseEntity;
+
+  @ApiProperty({ type: UserBaseEntity })
+  @Expose()
+  @Type(() => UserBaseEntity)
+  readonly approvedBy: UserBaseEntity;
+
+  @ApiProperty({ type: UserBaseEntity })
+  @Expose()
+  @Type(() => UserBaseEntity)
+  readonly disapprovedBy: UserBaseEntity;
 }

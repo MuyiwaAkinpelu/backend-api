@@ -49,7 +49,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
     private readonly passwordResetService: PasswordResetService,
-  ) {}
+  ) { }
 
   @SkipThrottle()
   @Version('1')
@@ -76,7 +76,7 @@ export class AuthController {
     @Request() req: any,
     @Ip() deviceIp: string,
   ): Promise<Auth.AccessRefreshTokens> {
-    return this.authService.signIn(signInDto, deviceIp);
+    return this.authService.signIn(signInDto, deviceIp, req.headers['user-agent']);
   }
 
   @Version('1')

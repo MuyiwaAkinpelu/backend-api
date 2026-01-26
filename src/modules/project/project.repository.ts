@@ -139,4 +139,39 @@ export class ProjectRepository {
 
     return project.managers;
   }
+
+  /**
+   * @desc Removes a project ID from all users' member and manager arrays
+   */
+  async removeProjectFromUsers(
+    projectId: string,
+    transactionClient: PrismaRepositoryClient = this.prisma,
+  ): Promise<void> {
+    // MongoDB multi-update to pull the ID from arrays
+    // Prisma Mongo supports 'push' but 'pull' is often handled by 'set' in a loop or raw commands.
+    // For safety and performance, we find affected users first.
+    const affectedUsers = await transactionClient.user.findMany({
+      where: {
+        OR: [
+          { projectMemberProjectIDs: { has: projectId } },
+          { projectManagerProjectIDs: { has: projectId } },
+        ],
+      },
+      select: { id: true, projectMemberProjectIDs: true, projectManagerProjectIDs: true }
+    });
+
+    for (const user of affectedUsers) {
+      await transactionClient.user.update({
+        where: { id: user.id },
+        data: {
+          projectMemberProjectIDs: {
+            set: user.projectMemberProjectIDs.filter(id => id !== projectId)
+          },
+          projectManagerProjectIDs: {
+            set: user.projectManagerProjectIDs.filter(id => id !== projectId)
+          }
+        }
+      });
+    }
+  }
 }

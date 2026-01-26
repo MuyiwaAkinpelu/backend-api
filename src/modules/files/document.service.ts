@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DocumentVisibility, File, Prisma } from '@prisma/client';
+import { DocumentVisibility, File, Prisma, ApprovalStatus } from '@prisma/client';
 import { PrismaService } from '@providers/prisma';
 import { DocumentSearchObject } from '@modules/search/objects/document.search.object';
 import { SearchService } from '@modules/search/search.service';
 import { DocumentFiltersDTO } from './dto/document-filter.dto';
+import { MyDocumentFiltersDTO } from './dto/my-document-filter.dto';
 import { FileRepository } from './file.repository';
 
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
@@ -34,7 +35,7 @@ export class DocumentService {
     return await this.searchService.searchIndex(data);
   }
 
-  async getDocumentById(id: string): Promise<File> {
+  async getDocumentById(id: string, incrementView = false): Promise<File> {
     const document = await this.prisma.file.findUnique({
       where: { id },
       include: {
@@ -54,12 +55,40 @@ export class DocumentService {
             avatar: true,
           },
         },
+        approvalRequests: {
+          select: {
+            status: true,
+          },
+        },
       },
     });
     if (!document) {
       throw new NotFoundException('Document not found');
     }
+
+    // Check if document is approved before incrementing views
+    const isApproved = document.approvalRequests?.some(
+      (req) => req.status === ApprovalStatus.APPROVED,
+    );
+
+    if (incrementView && isApproved) {
+      this.incrementView(id);
+    }
     return document;
+  }
+
+  async incrementView(id: string) {
+    await this.prisma.file.update({
+      where: { id },
+      data: { views: { increment: 1 } },
+    });
+  }
+
+  async incrementDownload(id: string) {
+    await this.prisma.file.update({
+      where: { id },
+      data: { downloads: { increment: 1 } },
+    });
   }
 
   async getDocuments(
@@ -67,8 +96,9 @@ export class DocumentService {
   ): Promise<PaginatorTypes.PaginatedResult<File>> {
     const { page, limit, sortBy, order, ...filters } = paginationDTO;
 
-    const where = this.buildWhereClause(filters);
+    const where = await this.buildWhereClause(filters);
     const include: Prisma.FileInclude = {
+      // ... unchanged include block ...
       uploader: {
         select: {
           id: true,
@@ -92,27 +122,45 @@ export class DocumentService {
           createdAt: true,
           updatedAt: true,
           projectId: true,
+          submittedById: true,
+          approvedById: true,
+          disapprovedById: true,
+          disapprovalReason: true,
           approvedBy: {
             select: {
+              id: true,
               firstName: true,
               lastName: true,
+              avatar: true,
             },
           },
           disapprovedBy: {
             select: {
+              id: true,
               firstName: true,
               lastName: true,
-            },
-          },
-          project: {
-            select: {
-              managers: true,
-              name: true,
+              avatar: true,
             },
           },
         },
       },
-      projects: true,
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          description: true,
+          managers: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+              email: true,
+            },
+          },
+        },
+      },
     };
 
     const paginationOptions: PaginatorTypes.PaginateOptions = {
@@ -138,10 +186,11 @@ export class DocumentService {
   ): Promise<PaginatorTypes.PaginatedResult<File>> {
     const { page, limit, sortBy, order, ...filters } = paginationDTO;
 
-    const where = this.buildWhereClause(filters);
+    const where = await this.buildWhereClause(filters);
     where.uploaderId = userId;
 
     const include: Prisma.FileInclude = {
+      // ... unchanged include block ...
       uploader: {
         select: {
           id: true,
@@ -165,27 +214,61 @@ export class DocumentService {
           createdAt: true,
           updatedAt: true,
           projectId: true,
+          submittedById: true,
+          approvedById: true,
+          disapprovedById: true,
+          disapprovalReason: true,
           approvedBy: {
             select: {
+              id: true,
               firstName: true,
               lastName: true,
+              avatar: true,
             },
           },
           disapprovedBy: {
             select: {
+              id: true,
               firstName: true,
               lastName: true,
+              avatar: true,
             },
           },
           project: {
             select: {
-              managers: true,
+              id: true,
               name: true,
+              category: true,
+              managers: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatar: true,
+                  email: true,
+                },
+              },
             },
           },
         },
       },
-      projects: true,
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          description: true,
+          managers: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatar: true,
+              email: true,
+            },
+          },
+        },
+      },
     };
 
     const paginationOptions: PaginatorTypes.PaginateOptions = {
@@ -248,7 +331,7 @@ export class DocumentService {
     return { message: 'Document deleted successfully' };
   }
 
-  private buildWhereClause(filters: DocumentFiltersDTO) {
+  private async buildWhereClause(filters: any) {
     const where: Prisma.FileWhereInput = {};
 
     if (filters) {
@@ -261,24 +344,39 @@ export class DocumentService {
       if (filters.visibility !== undefined) {
         where.visibility = filters.visibility;
       }
+
+      // Optimization: Manual Join for approvalStatus to avoid slow Prisma relation lookups in Mongo
       if (filters.approvalStatus !== undefined) {
+        const requests = await this.prisma.approvalRequest.findMany({
+          where: { status: filters.approvalStatus },
+          select: { documentId: true },
+        });
+        const documentIds = requests.map((req) => req.documentId);
+        where.id = { in: documentIds };
+      } else if (filters.isDraft === true) {
         where.approvalRequests = {
-          some: {
-            status: filters.approvalStatus,
-          },
+          none: {},
+        };
+      } else if (filters.isDraft === false) {
+        where.approvalRequests = {
+          some: {},
         };
       }
+
       if (filters.projectIDs) {
         where.projectsIDs = { hasSome: filters.projectIDs };
       }
-      if (filters.sizeMin !== undefined) {
-        where.size = { gte: filters.sizeMin };
-      }
-      if (filters.sizeMax !== undefined) {
-        where.size = { lte: filters.sizeMax };
+      if (filters.sizeMin !== undefined || filters.sizeMax !== undefined) {
+        where.size = {};
+        if (filters.sizeMin !== undefined) {
+          where.size.gte = filters.sizeMin;
+        }
+        if (filters.sizeMax !== undefined) {
+          where.size.lte = filters.sizeMax;
+        }
       }
       if (filters.fileType) {
-        where.fileType = filters.fileType;
+        where.fileType = { in: filters.fileType, mode: 'insensitive' };
       }
       if (filters.uploadedAfter) {
         where.uploadDate = {
@@ -294,7 +392,7 @@ export class DocumentService {
         where.tags = { hasSome: filters.tags };
       }
       if (filters.contentType) {
-        where.contentType = filters.contentType;
+        where.contentType = { in: filters.contentType, mode: 'insensitive' };
       }
       if (filters.description) {
         where.description = {
