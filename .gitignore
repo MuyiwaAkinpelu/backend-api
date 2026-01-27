@@ -37,6 +37,6 @@ lerna-debug.log*
 .adminjs
 .env.local
 .env
- 
- /officeParserTemp
+
+officeParserTemp/
 

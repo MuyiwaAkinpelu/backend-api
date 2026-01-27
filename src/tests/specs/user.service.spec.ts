@@ -27,6 +27,7 @@ import { NotFoundException } from '@nestjs/common';
 import { USER_NOT_FOUND } from '@constants/errors.constants';
 import { MailModule } from '@modules/mail/mail.module';
 import { UploadService } from '@modules/files/upload.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('UserService', () => {
   let userService: UserService;
@@ -66,6 +67,10 @@ describe('UserService', () => {
         {
           provide: SearchService,
           useValue: { searchIndex: jest.fn(), insertIndex: jest.fn() },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: { emit: jest.fn() },
         },
         PrismaClient,
       ],
