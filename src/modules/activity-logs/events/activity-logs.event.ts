@@ -1,4 +1,4 @@
-import { ActivityEntity, ActivityVerb, Prisma } from "@prisma/client";
+import { ActivityEntity, ActivityOutcome, ActivityVerb, Prisma, SecurityEventType } from "@prisma/client";
 
 export interface ActivityEvent {
     userId: string;
@@ -6,6 +6,8 @@ export interface ActivityEvent {
     entity: ActivityEntity;
     entityId?: string;
     metadata?: Prisma.JsonValue;
+    securityEvent?: SecurityEventType;
+    outcome?: ActivityOutcome;
     ip?: string;
     userAgent?: string;
     occurredAt?: Date;

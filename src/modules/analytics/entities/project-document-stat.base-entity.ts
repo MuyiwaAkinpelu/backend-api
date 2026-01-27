@@ -15,6 +15,10 @@ export default class ProjectDocumentStatBaseEntity {
   @Expose()
   readonly totalViews!: number;
 
+  @ApiProperty()
+  @Expose()
+  readonly totalDownloads!: number;
+
   @ApiProperty({ nullable: true })
   @Expose()
   readonly lastActivity!: Date | null;

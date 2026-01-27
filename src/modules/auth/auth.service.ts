@@ -13,7 +13,7 @@ import {
   MFA_PHONE_OR_TOKEN_REQUIRED,
   USER_CONFLICT,
 } from '@constants/errors.constants';
-import { ActivityEntity, ActivityVerb, SecurityEventType, TokenUseCase, User } from '@prisma/client';
+import { ActivityEntity, ActivityOutcome, ActivityVerb, SecurityEventType, TokenUseCase, User } from '@prisma/client';
 import { SignInDto } from '@modules/auth/dto/sign-in.dto';
 import { AuthTokenService } from '@modules/auth/auth-token.service';
 import { RedisService } from './redis.service';
@@ -58,12 +58,12 @@ export class AuthService {
   }
 
   /**
-   * @desc Create a new user
    * @param signUpDto
+   * @param performedBy The ID of the user performing the account creation.
    * @returns Promise<User> - Created user
    * @throws ConflictException - User with this email or phone already exists
    */
-  async createAccount(signUpDto: SignUpDto): Promise<User> {
+  async createAccount(signUpDto: SignUpDto, performedBy?: string): Promise<User> {
     const testUser: User = await this.userRepository.findOne({
       where: { email: signUpDto.email },
     });
@@ -74,8 +74,24 @@ export class AuthService {
     }
 
     const user = await this.userRepository.create(signUpDto);
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.CREATE,
+      entity: ActivityEntity.USER,
+      entityId: user.id,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: null,
+      metadata: {
+        targetUserEmail: user.email,
+      },
+      occurredAt: new Date(),
+    });
+
     const passwordResetLink =
       await this.passwordResetService.newAccountResetLink(user.id);
+
+    console.log('passwordResetLink', passwordResetLink);
 
     try {
       const { firstName, lastName, email } = user;
@@ -109,10 +125,13 @@ export class AuthService {
         userId: undefined,
         verb: ActivityVerb.LOGIN,
         entity: ActivityEntity.AUTH,
+        outcome: ActivityOutcome.FAILURE,
+        securityEvent: SecurityEventType.FAILED_LOGIN,
         metadata: {
-          outcome: 'FAILURE',
+          outcome: ActivityOutcome.FAILURE,
           reason: 'USER_NOT_FOUND',
           securityEvent: SecurityEventType.FAILED_LOGIN,
+          targetUserEmail: signInDto.email,
         },
         ip: deviceIp,
         userAgent,
@@ -127,10 +146,13 @@ export class AuthService {
         userId: undefined,
         verb: ActivityVerb.LOGIN,
         entity: ActivityEntity.AUTH,
+        outcome: ActivityOutcome.FAILURE,
+        securityEvent: SecurityEventType.FAILED_LOGIN,
         metadata: {
-          outcome: 'FAILURE',
+          outcome: ActivityOutcome.FAILURE,
           reason: 'USER_NOT_ACTIVE',
           securityEvent: SecurityEventType.FAILED_LOGIN,
+          targetUserEmail: signInDto.email,
         },
         ip: deviceIp,
         userAgent,
@@ -150,10 +172,13 @@ export class AuthService {
         userId: undefined,
         verb: ActivityVerb.LOGIN,
         entity: ActivityEntity.AUTH,
+        outcome: ActivityOutcome.FAILURE,
+        securityEvent: SecurityEventType.FAILED_LOGIN,
         metadata: {
-          outcome: 'FAILURE',
+          outcome: ActivityOutcome.FAILURE,
           reason: 'INVALID_PASSWORD',
           securityEvent: SecurityEventType.FAILED_LOGIN,
+          targetUserEmail: signInDto.email,
         },
         ip: deviceIp,
         userAgent,
@@ -189,10 +214,12 @@ export class AuthService {
       lastLogin: new Date(),
     });
 
-    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+    this.eventEmitter.emitAsync(ActivityLogEvent.ACTIVITY_LOG, {
       userId: testUser.id,
       verb: ActivityVerb.LOGIN,
       entity: ActivityEntity.AUTH,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: null,
       metadata: {
         outcome: 'SUCCESS',
         reason: 'SUCCESS',
@@ -252,5 +279,46 @@ export class AuthService {
     // Check if device IP is new by querying Redis
     const result = await this.redisService.exists(`device:${userId}:${ip}`);
     return result === 0; // Returns 0 if key doesn't exist (new device)
+  }
+
+
+  async resendAccountSetupInvite(userId: string, performedBy: string): Promise<void> {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      return;
+    }
+
+    if (user.lastLogin != null) {
+      throw new BadRequestException('User has already set up their account');
+    }
+
+    // Generate new setup link
+    const passwordResetLink =
+      await this.passwordResetService.newAccountResetLink(user.id);
+
+    // Send email
+    try {
+      this.mailService.sendAccountCreationNotification(user.email, {
+        fullName: `${user.firstName} ${user.lastName}`,
+        passwordResetLink,
+      });
+    } catch (error) {
+      this.logger.error(error);
+    }
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.USER,
+      entityId: userId,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: null,
+      metadata: {
+        targetUserEmail: user.email,
+        action: 'RESENT_INVITE',
+      },
+      occurredAt: new Date(),
+    });
   }
 }

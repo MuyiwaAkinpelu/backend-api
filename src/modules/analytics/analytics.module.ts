@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '@providers/prisma/prisma.module';
 import { UserModule } from '@modules/user/user.module';
 import { AuthModule } from '@modules/auth/auth.module';
+import { ActivityLogsModule } from '@modules/activity-logs/activity-logs.module';
 import { AnalyticsListener } from './analytics.listener';
 import { AnalyticsController } from './controllers/analytics.controller';
 import { AnalyticsService } from './services/analytics.service';
@@ -19,7 +20,7 @@ import { CaslModule } from '@modules/casl';
 import { permissions } from './analytics.permissions';
 
 @Module({
-    imports: [PrismaModule, UserModule, forwardRef(() => AuthModule), CaslModule.forFeature({ permissions })],
+    imports: [PrismaModule, UserModule, forwardRef(() => AuthModule), ActivityLogsModule, CaslModule.forFeature({ permissions })],
     controllers: [AnalyticsController],
     providers: [
         AnalyticsListener,

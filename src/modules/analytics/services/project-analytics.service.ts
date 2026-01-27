@@ -66,4 +66,50 @@ export class ProjectAnalyticsService {
             totalSubmitted,
         }
     }
+
+    async getProjectsStatsBatch(projectIds: string[]) {
+        const approvalStats = await this.prisma.approvalRequest.groupBy({
+            by: ['projectId', 'status'],
+            where: { projectId: { in: projectIds } },
+            _count: { id: true }
+        });
+
+        const totalSubmittedStats = await this.prisma.approvalRequest.groupBy({
+            by: ['projectId'],
+            where: { projectId: { in: projectIds } },
+            _count: { id: true }
+        });
+
+        // For total files, since it's an array field in MongoDB, we fetch all projects and their document count at once
+        const projectsWithFileCount = await this.prisma.project.findMany({
+            where: { id: { in: projectIds } },
+            select: { id: true, _count: { select: { documents: true } } }
+        });
+
+        const statsMap = new Map<string, any>();
+        projectIds.forEach(id => {
+            statsMap.set(id, { approved: 0, pending: 0, declined: 0, totalSubmitted: 0, total: 0 });
+        });
+
+        approvalStats.forEach(stat => {
+            const entry = statsMap.get(stat.projectId);
+            if (entry) {
+                if (stat.status === ApprovalStatus.APPROVED) entry.approved = stat._count.id;
+                else if (stat.status === ApprovalStatus.PENDING) entry.pending = stat._count.id;
+                else if (stat.status === ApprovalStatus.DECLINED) entry.declined = stat._count.id;
+            }
+        });
+
+        totalSubmittedStats.forEach(stat => {
+            const entry = statsMap.get(stat.projectId);
+            if (entry) entry.totalSubmitted = stat._count.id;
+        });
+
+        projectsWithFileCount.forEach(p => {
+            const entry = statsMap.get(p.id);
+            if (entry) entry.total = p._count.documents;
+        });
+
+        return statsMap;
+    }
 }

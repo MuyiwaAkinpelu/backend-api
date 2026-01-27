@@ -50,7 +50,7 @@ export class PasswordResetService {
       TokenType.HEX,
     );
 
-    const link = `${this.clientURL}/reset-password/${token.code}/?u=${id}`;
+    const link = `${this.clientURL}/setup-password/${token.code}/?u=${id}`;
 
     return link;
   }

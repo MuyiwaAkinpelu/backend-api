@@ -7,7 +7,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ProjectCategory } from '@prisma/client';
+import { ProjectCategory, Status } from '@prisma/client';
 import { Transform } from 'class-transformer';
 
 export class ProjectFiltersDTO {
@@ -15,6 +15,11 @@ export class ProjectFiltersDTO {
   @IsOptional()
   @IsEnum(ProjectCategory)
   category?: ProjectCategory;
+
+  @ApiPropertyOptional({ enum: Status })
+  @IsOptional()
+  @IsEnum(Status)
+  status?: Status;
 
   @IsOptional()
   @IsString()

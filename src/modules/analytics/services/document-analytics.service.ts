@@ -105,7 +105,59 @@ export class DocumentAnalyticsService {
         return result?._sum?.downloads || 0;
     }
 
+    //  async totalDownloads(where: Prisma.FileWhereInput = {}): Promise<number> {
+    //     // If we have projectsIDs in where, we can potentially use ProjectDocumentStat
+    //     // But for global total, DailyDownloadStat is best. 
+    //     if (where.projectsIDs) {
+    //         const projectIds = (where.projectsIDs as any).hasSome || [];
+    //         if (projectIds.length > 0) {
+    //             const stats = await this.prisma.projectDocumentStat.aggregate({
+    //                 where: { projectId: { in: projectIds } },
+    //                 _sum: { totalDownloads: true }
+    //             });
+    //             return stats._sum?.totalDownloads || 0;
+    //         }
+    //     }
+
+    //     const result = await this.prisma.dailyDownloadStat.aggregate({
+    //         _sum: { downloads: true }
+    //     });
+    //     return result?._sum?.downloads || 0;
+    // }
+
     async count(where: Prisma.FileWhereInput = {}): Promise<number> {
         return this.prisma.file.count({ where });
+    }
+
+    async getSummaryStats(where: Prisma.FileWhereInput = {}) {
+        const thirtyDaysAgo = moment().subtract(30, 'days').toDate();
+        const sixtyDaysAgo = moment().subtract(60, 'days').toDate();
+
+        const [current, previous, total, totalDownloads] = await Promise.all([
+            this.prisma.file.count({
+                where: { ...where, uploadDate: { gte: thirtyDaysAgo } }
+            }),
+            this.prisma.file.count({
+                where: { ...where, uploadDate: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } }
+            }),
+            this.prisma.file.count({ where }),
+            this.totalDownloads(where)
+        ]);
+
+        const getMetric = (curr: number, prev: number, tot: number) => {
+            if (prev === 0) return { current: tot };
+            const change = ((curr - prev) / prev) * 100;
+            const isPositive = change >= 0;
+            return {
+                current: tot,
+                change: `${isPositive ? '+' : ''}${change.toFixed(1)}%`,
+                isPositive
+            };
+        };
+
+        return {
+            totalDocuments: getMetric(current, previous, total),
+            totalDownloads
+        };
     }
 }

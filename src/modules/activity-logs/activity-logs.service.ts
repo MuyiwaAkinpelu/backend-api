@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "@providers/prisma";
 import { ActivityLogWithUser, LogActivityInput } from "./types";
-import { ActivityLog, ActivityEntity, ActivityVerb, Prisma } from "@prisma/client";
+import { ActivityLog, ActivityEntity, ActivityVerb, Prisma, ActivityOutcome, SecurityEventType } from "@prisma/client";
 import { ApprovalActivityMetadata, FileActivityMetadata, ProjectActivityMetadata, UserActivityMetadata } from "./activity-log.metadata";
 import { OnEvent } from "@nestjs/event-emitter";
 import { ActivityEvent } from "./events/activity-logs.event";
@@ -12,6 +12,7 @@ import { ActivityLogsFiltersDTO } from "./dtos/activity-logs-filter.dto";
 import { ActivityLogsDTO } from "./dtos/activity-logs.dto";
 import { PaginatorTypes } from "@nodeteam/nestjs-prisma-pagination";
 import { ActivityLogRepository } from "./activity-logs.repository";
+import { normalizeIp } from "src/common/utils";
 
 @Injectable()
 export class ActivityLogsService {
@@ -23,14 +24,19 @@ export class ActivityLogsService {
     ) { }
 
     // --- Internal DB writer ---
-    private async create(data: LogActivityInput & { occurredAt?: Date }): Promise<ActivityLog> {
+    private async create(data: LogActivityInput): Promise<ActivityLog> {
         return this.prisma.activityLog.create({
             data: {
                 ...(data.userId && { user: { connect: { id: data.userId } } }),
                 verb: data.verb,
                 entity: data.entity,
                 entityId: data.entityId,
+                actorId: data.actorId,
+                actorName: data.actorName,
+                actorEmail: data.actorEmail,
                 metadata: data.metadata,
+                outcome: data.outcome,
+                securityEvent: data.securityEvent,
                 ip: data.ip,
                 userAgent: data.userAgent,
                 occurredAt: data.occurredAt || new Date(),
@@ -41,17 +47,41 @@ export class ActivityLogsService {
     // --- Event listener for async logging ---
     @OnEvent(ActivityLogEvent.ACTIVITY_LOG, { async: true })
     async handleActivityLog(payload: ActivityEvent) {
+        console.log('Received activity log event:', ActivityLogEvent.ACTIVITY_LOG, payload);
         try {
+            console.log('create activity log', payload);
+
+            let actorId = payload.userId;
+            let actorName = 'Someone';
+            let actorEmail = null;
+
+            if (payload.userId) {
+                const user = await this.prisma.user.findUnique({
+                    where: { id: payload.userId },
+                    select: { firstName: true, lastName: true, email: true }
+                });
+                if (user) {
+                    actorName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email;
+                    actorEmail = user.email;
+                }
+            }
+
             await this.create({
                 userId: payload.userId,
                 verb: payload.verb,
                 entity: payload.entity,
+                securityEvent: payload.securityEvent,
+                outcome: payload.outcome,
                 entityId: payload.entityId,
+                actorId: actorId,
+                actorName: actorName,
+                actorEmail: actorEmail,
                 metadata: payload.metadata,
-                ip: payload.ip,
+                ip: normalizeIp(payload.ip),
                 userAgent: payload.userAgent,
                 occurredAt: payload.occurredAt,
             });
+            console.log('Activity log created successfully');
         } catch (error) {
             this.logger.error("Failed to write activity log", error);
         }
@@ -132,6 +162,10 @@ export class ActivityLogsService {
             verb: log.verb,
             entity: log.entity,
             entityId: log.entityId,
+            actorId: log.actorId,
+            actorName: log.actorName,
+            actorEmail: log.actorEmail,
+            outcome: log.outcome,
             description: this.format(log),
             createdAt: log.occurredAt || log.createdAt,
         });
@@ -141,9 +175,8 @@ export class ActivityLogsService {
 
     // --- Human-readable formatter ---
     format(log: ActivityLogWithUser): string {
-        const actor =
-            log.user?.firstName ||
-            log.user?.lastName ||
+        const actor = log.actorName ||
+            [log.user?.firstName, log.user?.lastName].filter(Boolean).join(' ') ||
             log.user?.email ||
             "Someone";
 
@@ -171,7 +204,10 @@ export class ActivityLogsService {
             case ActivityVerb.VIEW: return `${actor} viewed ${filename}`;
             case ActivityVerb.DOWNLOAD: return `${actor} downloaded ${filename}`;
             case ActivityVerb.UPDATE: return `${actor} updated ${filename}`;
-            case ActivityVerb.DELETE: return `${actor} deleted ${filename}`;
+            case ActivityVerb.DELETE: {
+                const status = meta.approvalStatus ? ` (${meta.approvalStatus})` : '';
+                return `${actor} deleted a file - ${filename}${status}`;
+            }
             case ActivityVerb.SHARE: return `${actor} shared ${filename}`;
             default: return `${actor} interacted with ${filename}`;
         }
@@ -182,7 +218,10 @@ export class ActivityLogsService {
         const projectName = meta.projectName ?? "a project";
         switch (log.verb) {
             case ActivityVerb.CREATE: return `${actor} created project "${projectName}"`;
-            case ActivityVerb.UPDATE: return `${actor} updated project "${projectName}"`;
+            case ActivityVerb.UPDATE: {
+                if (meta.action === 'DEACTIVATED') return `${actor} deactivated project "${projectName}"`;
+                return `${actor} updated project "${projectName}"`;
+            }
             case ActivityVerb.DELETE: return `${actor} deleted project "${projectName}"`;
             default: return `${actor} interacted with project "${projectName}"`;
         }
@@ -192,16 +231,21 @@ export class ActivityLogsService {
         const meta = this.asObject(log.metadata) as ApprovalActivityMetadata;
         const documentName = meta.documentName ?? "a document";
         switch (log.verb) {
-            case ActivityVerb.CREATE: return `${actor} submitted ${documentName} for approval`;
-            case ActivityVerb.APPROVE: return `${actor} approved ${documentName}`;
-            case ActivityVerb.DECLINE: return `${actor} declined ${documentName}`;
-            default: return `${actor} processed an approval`;
+            case ActivityVerb.CREATE: return `${actor} submitted a document for approval - ${documentName}`;
+            case ActivityVerb.APPROVE: return `${actor} approved a document - ${documentName}`;
+            case ActivityVerb.DECLINE: return `${actor} declined a document - ${documentName}`;
+            default: return `${actor} processed an approval - ${documentName}`;
         }
     }
 
     private formatAuthActivity(log: ActivityLog, actor: string): string {
         switch (log.verb) {
-            case ActivityVerb.LOGIN: return `${actor} logged in`;
+            case ActivityVerb.LOGIN:
+                if (log.outcome === ActivityOutcome.FAILURE) {
+                    const meta = this.asObject(log.metadata);
+                    return `Unknown user ${(meta.targetUserEmail) ?? ('N/A')} failed to log in`;
+                }
+                return `${actor} logged in`;
             case ActivityVerb.LOGOUT: return `${actor} logged out`;
             default: return `${actor} performed an authentication action`;
         }
@@ -210,11 +254,12 @@ export class ActivityLogsService {
     private formatUserActivity(log: ActivityLog, actor: string): string {
         const meta = this.asObject(log.metadata) as UserActivityMetadata;
         const targetUser = meta.targetUserEmail ?? "a user";
+
         switch (log.verb) {
-            case ActivityVerb.CREATE: return `${actor} created user ${targetUser}`;
-            case ActivityVerb.UPDATE: return `${actor} updated user ${targetUser}`;
-            case ActivityVerb.DELETE: return `${actor} deleted user ${targetUser}`;
-            default: return `${actor} managed a user`;
+            case ActivityVerb.CREATE: return `${actor} created user - ${targetUser}`;
+            case ActivityVerb.UPDATE: return `${actor} ${meta.action?.toLowerCase() ?? 'updated'} user - ${targetUser}`;
+            case ActivityVerb.DELETE: return `${actor} deleted user - ${targetUser}`;
+            default: return `${actor} managed user - ${targetUser}`;
         }
     }
 

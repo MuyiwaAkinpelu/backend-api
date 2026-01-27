@@ -3,7 +3,6 @@ import { Roles } from '@modules/app/app.roles';
 
 export default class UserEntity implements User {
   lastLogin: Date;
-  department: string;
   designation: string;
   readonly id!: string;
 
@@ -18,6 +17,8 @@ export default class UserEntity implements User {
   readonly password!: string | null;
 
   readonly avatar!: string | null;
+
+  readonly department!: string | null;
 
   readonly roles!: Roles[];
 

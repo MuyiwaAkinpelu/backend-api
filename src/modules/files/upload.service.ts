@@ -13,8 +13,10 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as officeParser from 'officeparser';
 import { Readable } from 'stream';
-import { ApprovalStatus, Roles, DocumentVisibility } from '@prisma/client';
+import { ApprovalStatus, Roles, DocumentVisibility, ActivityVerb, ActivityEntity, ActivityOutcome } from '@prisma/client';
 import { SearchService } from '@modules/search/search.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ActivityLogEvent } from '@modules/activity-logs/constants';
 
 @Injectable()
 export class UploadService {
@@ -26,7 +28,9 @@ export class UploadService {
     @Inject(forwardRef(() => PrismaService))
     private readonly prisma: PrismaService,
 
+    @Inject('SearchServiceInterface')
     private readonly searchService: SearchService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.s3Client = new S3Client({
       region: this.configService.getOrThrow(AWS_S3_REGION),
@@ -119,50 +123,83 @@ export class UploadService {
     userRoles,
     projectId,
   }: SaveFileToDBParams & { fileType: string }) {
-    // Save file details to the database using Prisma
-    const savedFile = await this.prisma.file.create({
-      data: {
-        filename: fileName,
-        originalFilename,
-        path: fileUrl,
-        fileType,
-        uploader: {
-          connect: {
-            id: uploaderId,
-          },
-        },
-        contentType,
-        size,
-        tags,
-        ...(userRoles.some(role => role === Roles.SYSTEM_ADMIN || role === Roles.MANAGEMENT_STAFF) &&
-          projectId && {
-          approvalRequests: {
-            create: {
-              approvedBy: {
-                connect: {
-                  id: uploaderId,
-                },
-              },
-              project: {
-                connect: {
-                  id: projectId,
-                },
-              },
-              status: ApprovalStatus.APPROVED,
-            },
-          },
-          projects: {
+    try {
+      // Save file details to the database using Prisma
+      const savedFile = await this.prisma.file.create({
+        data: {
+          filename: fileName,
+          originalFilename,
+          path: fileUrl,
+          fileType,
+          uploader: {
             connect: {
-              id: projectId,
+              id: uploaderId,
             },
           },
-        }),
-      },
-    });
+          contentType,
+          size,
+          tags,
+          ...(userRoles.some(role => role === Roles.SYSTEM_ADMIN || role === Roles.MANAGEMENT_STAFF) &&
+            projectId && {
+            approvalRequests: {
+              create: {
+                approvedBy: {
+                  connect: {
+                    id: uploaderId,
+                  },
+                },
+                project: {
+                  connect: {
+                    id: projectId,
+                  },
+                },
+                status: ApprovalStatus.APPROVED,
+              },
+            },
+            projects: {
+              connect: {
+                id: projectId,
+              },
+            },
+          }),
+        },
+      });
 
-    return savedFile;
+      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+        userId: uploaderId,
+        verb: ActivityVerb.CREATE,
+        entity: ActivityEntity.FILE,
+        entityId: savedFile.id,
+        outcome: ActivityOutcome.SUCCESS,
+        securityEvent: null,
+        metadata: {
+          filename: originalFilename,
+          size,
+          contentType,
+          projectId,
+        },
+        occurredAt: new Date(),
+      });
 
-    return savedFile;
+      return savedFile;
+    } catch (error) {
+      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+        userId: uploaderId,
+        verb: ActivityVerb.CREATE,
+        entity: ActivityEntity.FILE,
+        entityId: null,
+        outcome: ActivityOutcome.FAILURE,
+        securityEvent: null,
+        metadata: {
+          filename: originalFilename,
+          size,
+          contentType,
+          projectId,
+        },
+        occurredAt: new Date(),
+      });
+      throw error;
+    }
   }
 
   async extractTextFromFile(

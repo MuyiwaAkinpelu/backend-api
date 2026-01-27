@@ -7,7 +7,9 @@ import {
 } from '@nestjs/common';
 import { ApprovalRequestRepository } from './approval-request.repository';
 import { PrismaService } from '@providers/prisma';
-import { ApprovalRequest, ApprovalStatus, Prisma } from '@prisma/client';
+import { ApprovalRequest, ApprovalStatus, Prisma, Roles, ActivityVerb, ActivityEntity, ActivityOutcome, SecurityEventType } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ActivityLogEvent } from '@modules/activity-logs/constants';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import {
   DOCUMENT_NOT_FOUND,
@@ -33,6 +35,7 @@ export class ApprovalRequestService {
     private readonly userRepository: UserRepository,
     private readonly projectRepository: ProjectRepository,
     private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   async findById(id: string): Promise<ApprovalRequest> {
@@ -145,14 +148,16 @@ export class ApprovalRequestService {
       throw new NotFoundException(USER_NOT_FOUND);
     }
 
-    // Validate project existence and user membership (as manager)
-    const isUserManagerOfProject =
-      await this.projectRepository.isUserManagerOfProject(
-        request.projectId,
-        userId,
-      );
-    if (!isUserManagerOfProject) {
-      throw new ForbiddenException(USER_NOT_MANAGER);
+    if (!user.roles.includes(Roles.SYSTEM_ADMIN)) {
+      // Validate project existence and user membership (as manager)
+      const isUserManagerOfProject =
+        await this.projectRepository.isUserManagerOfProject(
+          request.projectId,
+          userId,
+        );
+      if (!isUserManagerOfProject) {
+        throw new ForbiddenException(USER_NOT_MANAGER);
+      }
     }
 
     // Perform operations within a transaction
@@ -179,6 +184,26 @@ export class ApprovalRequestService {
           transactionClient,
         );
 
+        // Emit log
+        const fullRequest = await this.prisma.approvalRequest.findUnique({
+          where: { id: requestId },
+          include: { document: { select: { originalFilename: true } } }
+        });
+
+        this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+          userId: userId,
+          verb: ActivityVerb.APPROVE,
+          entity: ActivityEntity.APPROVAL,
+          entityId: requestId,
+          outcome: ActivityOutcome.SUCCESS,
+          securityEvent: null,
+          metadata: {
+            documentName: fullRequest?.document?.originalFilename,
+            projectId: request.projectId,
+          },
+          occurredAt: new Date(),
+        });
+
         return updatedRequest;
       },
       { timeout: 20000 },
@@ -202,14 +227,17 @@ export class ApprovalRequestService {
       throw new NotFoundException(USER_NOT_FOUND);
     }
 
-    // Validate project existence and user membership (as manager)
-    const isUserManagerOfProject =
-      await this.projectRepository.isUserManagerOfProject(
-        request.projectId,
-        userId,
-      );
-    if (!isUserManagerOfProject) {
-      throw new ForbiddenException(USER_NOT_MANAGER);
+    if (!user.roles.includes(Roles.SYSTEM_ADMIN)) {
+
+      // Validate project existence and user membership (as manager)
+      const isUserManagerOfProject =
+        await this.projectRepository.isUserManagerOfProject(
+          request.projectId,
+          userId,
+        );
+      if (!isUserManagerOfProject) {
+        throw new ForbiddenException(USER_NOT_MANAGER);
+      }
     }
 
     // Update the approval request status
@@ -225,6 +253,27 @@ export class ApprovalRequestService {
         },
       },
     );
+
+    // Emit log
+    const fullRequest = await this.prisma.approvalRequest.findUnique({
+      where: { id: requestId },
+      include: { document: { select: { originalFilename: true } } }
+    });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: userId,
+      verb: ActivityVerb.DECLINE,
+      entity: ActivityEntity.APPROVAL,
+      entityId: requestId,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: null,
+      metadata: {
+        documentName: fullRequest?.document?.originalFilename,
+        projectId: request.projectId,
+        reason: disapprovalReason,
+      },
+      occurredAt: new Date(),
+    });
 
     return updatedRequest;
   }

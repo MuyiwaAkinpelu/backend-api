@@ -20,6 +20,30 @@ export default class ActivityLogBaseEntity {
   @Expose()
   readonly entityId!: string | null;
 
+  @ApiProperty({ nullable: true })
+  @Expose()
+  readonly actorId!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @Expose()
+  readonly actorName!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @Expose()
+  readonly actorEmail!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @Expose()
+  readonly outcome!: string | null;
+
+  @ApiProperty({ nullable: true })
+  @Expose()
+  readonly occurredAt!: Date | null;
+
+  @ApiProperty({ nullable: true })
+  @Expose()
+  readonly securityEvent?: boolean;
+
   @ApiProperty()
   @Expose()
   readonly description!: string;

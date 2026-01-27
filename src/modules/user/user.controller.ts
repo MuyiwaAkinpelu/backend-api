@@ -51,16 +51,18 @@ import { UpdateUserDTO } from './dto/update-user.dto';
 @Controller('users')
 @SkipThrottle()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Get('members')
   @ApiOperation({ summary: 'Get all members' })
   @ApiOkBaseResponse({ dto: UserBaseEntity, isArray: true })
+  @ApiQuery({ name: 'all', required: false, type: Boolean, description: 'If true, returns all members regardless of active status. Defaults to false.' })
   @UseGuards(AccessGuard)
   @Serialize(UserBaseEntity)
   @UseAbility(Actions.read, UserEntity)
-  async findAllMembers(): Promise<User[]> {
-    return this.userService.findAllMembers();
+  async findAllMembers(@Query('all') all?: string): Promise<User[]> {
+    const includeAll = all === 'true';
+    return this.userService.findAllMembers(includeAll);
   }
 
   @Get()
@@ -86,7 +88,7 @@ export class UserController {
     @CaslConditions() conditions?: ConditionsProxy,
   ): Promise<User> {
     const tokenUser = await userProxy.get();
-    console.log(tokenUser);
+    // console.log(tokenUser);
 
     return this.userService.findOne(tokenUser.id);
   }
@@ -122,8 +124,10 @@ export class UserController {
   async updateUserProfile(
     @Param('userId') userId: string,
     @Body() updateUserDTO: UpdateUserDTO,
+    @CaslUser() userProxy?: UserProxy<User>,
   ) {
-    return this.userService.updateUser(userId, updateUserDTO);
+    const user = await userProxy.get();
+    return this.userService.updateUser(userId, updateUserDTO, user.id);
   }
 
   /**
@@ -138,9 +142,11 @@ export class UserController {
   async updateUserRoles(
     @Param('userId') userId: string,
     @Body() updateUserRolesDTO: UpdateUserRolesDTO,
+    @CaslUser() userProxy?: UserProxy<User>,
   ) {
+    const user = await userProxy.get();
     const { roles } = updateUserRolesDTO;
-    return this.userService.updateUserRoles(userId, roles);
+    return this.userService.updateUserRoles(userId, roles, user.id);
   }
 
   /**
@@ -155,9 +161,11 @@ export class UserController {
   async setUserRole(
     @Param('userId') userId: string,
     @Body() setUserRoleDTO: SetUserRoleDTO,
+    @CaslUser() userProxy?: UserProxy<User>,
   ) {
+    const user = await userProxy.get();
     const { role } = setUserRoleDTO;
-    return this.userService.setUserRole(userId, role);
+    return this.userService.setUserRole(userId, role, user.id);
   }
 
   /**
@@ -168,8 +176,12 @@ export class UserController {
   @Delete(':userId')
   @Serialize(UserBaseEntity)
   @ApiOperation({ summary: 'Delete user' })
-  async deleteUser(@Param('userId') userId: string) {
-    return this.userService.deleteUser(userId);
+  async deleteUser(
+    @Param('userId') userId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const user = await userProxy.get();
+    return this.userService.deleteUser(userId, user.id);
   }
 
   /**
@@ -180,8 +192,12 @@ export class UserController {
   @Put(':userId/activate')
   @Serialize(UserBaseEntity)
   @ApiOperation({ summary: 'Activate user account' })
-  async activateUser(@Param('userId') userId: string) {
-    return this.userService.activateUser(userId);
+  async activateUser(
+    @Param('userId') userId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const user = await userProxy.get();
+    return this.userService.activateUser(userId, user.id);
   }
 
   /**
@@ -192,8 +208,12 @@ export class UserController {
   @Put(':userId/deactivate')
   @Serialize(UserBaseEntity)
   @ApiOperation({ summary: 'Deactivate user account' })
-  async deactivateUser(@Param('userId') userId: string) {
-    return this.userService.deactivateUser(userId);
+  async deactivateUser(
+    @Param('userId') userId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const user = await userProxy.get();
+    return this.userService.deactivateUser(userId, user.id);
   }
 
   /**
@@ -204,7 +224,12 @@ export class UserController {
   @Put(':userId/verify')
   @Serialize(UserBaseEntity)
   @ApiOperation({ summary: 'Verify user account' })
-  async verifyUser(@Param('userId') userId: string) {
-    return this.userService.verifyUser(userId);
+  async verifyUser(
+    @Param('userId') userId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const user = await userProxy.get();
+    return this.userService.verifyUser(userId, user.id);
   }
+
 }

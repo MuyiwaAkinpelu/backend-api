@@ -1,4 +1,4 @@
-import { ActivityEntity, ActivityLog, ActivityVerb, Prisma, User } from "@prisma/client";
+import { ActivityEntity, ActivityLog, ActivityOutcome, ActivityVerb, Prisma, SecurityEventType, User } from "@prisma/client";
 
 export enum ActivityLogSortableColumns {
     CREATED_AT = 'createdAt',
@@ -18,7 +18,13 @@ export interface LogActivityInput {
     verb: ActivityVerb;
     entity: ActivityEntity;
     entityId?: string;
+    actorId?: string;
+    actorName: string;
+    actorEmail?: string;
+    occurredAt?: Date;
     metadata?: Prisma.JsonValue;
+    outcome?: ActivityOutcome;
+    securityEvent?: SecurityEventType;
     ip?: string;
     userAgent?: string;
 }

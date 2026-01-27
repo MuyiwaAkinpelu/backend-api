@@ -14,11 +14,13 @@ export interface FileActivityMetadata {
     filename?: string;
     fileSize?: number;
     fileType?: string;
+    approvalStatus?: string;
 }
 
 export interface ProjectActivityMetadata {
     projectName?: string;
     projectId?: string;
+    action?: string;
 }
 
 export interface ApprovalActivityMetadata {
@@ -30,4 +32,5 @@ export interface ApprovalActivityMetadata {
 export interface UserActivityMetadata {
     targetUserEmail?: string;
     targetUserId?: string;
+    action?: string;
 }

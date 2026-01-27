@@ -15,6 +15,9 @@ import { UserRepository } from '@modules/user/user.repository';
 import { ProjectRepository } from '@modules/project/project.repository';
 import { CaslModule } from '@modules/casl';
 import { permissions } from './files.permissions';
+import { UserModule } from '@modules/user/user.module';
+import { ProjectModule } from '@modules/project/project.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -25,21 +28,20 @@ import { permissions } from './files.permissions';
       useFactory: (configService: ConfigService) => [
         {
           ttl: seconds(configService.get(UPLOAD_RATE_TTL) || 60), // default is 60 seconds
-          limit: configService.get(UPLOAD_RATE_LIMIT) || 3, // default is 3 requests
+          limit: configService.get(UPLOAD_RATE_LIMIT) || 100, // default is 10 requests
         },
       ],
     }),
-    PrismaModule,
+    forwardRef(() => PrismaModule),
     SearchModule,
     CaslModule.forFeature({ permissions }),
+    UserModule,
+    forwardRef(() => ProjectModule),
   ],
   controllers: [DocumentController],
   providers: [
     DocumentService,
     FileRepository,
-    UserRepository,
-    ProjectRepository,
-    ApprovalRequestRepository,
     UploadService,
     {
       provide: APP_GUARD,
@@ -47,5 +49,6 @@ import { permissions } from './files.permissions';
     },
 
   ],
+  exports: [DocumentService, FileRepository, UploadService],
 })
 export class FilesModule { }

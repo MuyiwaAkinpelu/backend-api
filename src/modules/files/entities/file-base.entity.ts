@@ -85,6 +85,14 @@ export class FileBaseEntity extends PartialType(FileEntity) {
   @Type(() => UserBaseEntity)
   readonly sharedWith!: UserBaseEntity[];
 
+  @ApiProperty({ type: String })
+  @Expose()
+  readonly visibility!: string;
+
+  @ApiProperty({ type: Number })
+  @Expose()
+  readonly downloads!: number;
+
   @ApiProperty({ type: [ApprovalRequestBaseEntity] })
   @Expose()
   @Type(() => ApprovalRequestBaseEntity)

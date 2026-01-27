@@ -8,6 +8,10 @@ export default class ActivityLogEntity implements ActivityLog {
   readonly entity!: ActivityEntity;
   readonly entityId!: string | null;
 
+  readonly actorId!: string | null;
+  readonly actorName!: string | null;
+  readonly actorEmail!: string | null;
+
   readonly description!: string;
   readonly metadata!: Record<string, any> | null;
 

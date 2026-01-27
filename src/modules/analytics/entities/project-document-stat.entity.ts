@@ -7,6 +7,7 @@ export default class ProjectDocumentStatEntity implements ProjectDocumentStat {
   readonly documentCount!: number;
   readonly totalUploads!: number;
   readonly totalViews!: number;
+  readonly totalDownloads!: number;
 
   readonly lastActivity!: Date | null;
   readonly updatedAt!: Date;

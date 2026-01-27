@@ -65,7 +65,7 @@ export class ProjectController {
     type: ProjectBaseEntity,
   })
   @ApiResponse({ status: 404, description: 'Project not found' })
-  async findById(@Param('projectId') id: string): Promise<Project> {
+  async findById(@Param('projectId') id: string): Promise<any> {
     return this.projectService.findById(id);
   }
 
@@ -104,8 +104,10 @@ export class ProjectController {
   async update(
     @Param('projectId') id: string,
     @Body() data: UpdateProjectDTO,
+    @CaslUser() userProxy?: UserProxy<User>,
   ): Promise<Project> {
-    return this.projectService.update(id, data);
+    const user = await userProxy.get();
+    return this.projectService.update(id, data, user.id);
   }
 
   @Delete(':projectId')
@@ -116,8 +118,12 @@ export class ProjectController {
     type: ProjectBaseEntity,
   })
   @ApiResponse({ status: 404, description: 'Project not found' })
-  async delete(@Param('projectId') id: string): Promise<Project> {
-    return this.projectService.delete(id);
+  async delete(
+    @Param('projectId') id: string,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ): Promise<Project> {
+    const user = await userProxy.get();
+    return this.projectService.delete(id, user.id);
   }
 
   @Post(':projectId/members/:userId')

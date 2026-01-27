@@ -42,6 +42,8 @@ import { CustomFileTypeValidator } from './validators/custom-filetype.validator'
 import { RenameDocumentDto } from './dto/rename-document.dto';
 import { SkipAuth } from '@modules/auth/guard/skip-auth.guard';
 import { ParseMongoIdPipe } from '@pipes/parse-mongoid.pipe';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ActivityLogEvent } from '@modules/activity-logs/constants';
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -53,6 +55,7 @@ export class DocumentController {
   constructor(
     private readonly documentService: DocumentService,
     private readonly uploadService: UploadService,
+    private readonly eventEmitter: EventEmitter2,
   ) { }
 
   @ApiOperation({ summary: 'Search within publicly available documents' })
@@ -228,8 +231,12 @@ export class DocumentController {
   @ApiOperation({ summary: 'Delete a document' })
   @ApiResponse({ status: 200, description: 'Document deleted successfully' })
   @ApiResponse({ status: 404, description: 'Document not found' })
-  async deleteDocument(@Param('documentId') documentId: string) {
-    return this.documentService.deleteDocument(documentId);
+  async deleteDocument(
+    @Param('documentId') documentId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const user = await userProxy.get();
+    return this.documentService.deleteDocument(documentId, user.id);
   }
 
   @Get('download/:documentId')
@@ -243,15 +250,38 @@ export class DocumentController {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    await this.documentService.incrementDownload(documentId);
-
     const fileStream = await this.uploadService.downloadFile(document.filename);
+
+    this.eventEmitter.emit(ActivityLogEvent.DOCUMENT_DOWNLOADED, documentId);
 
     res.set({
       'Content-Type': document.contentType,
       'Content-Disposition': `attachment; filename="${document.originalFilename}"`,
     });
-    fileStream.pipe(res);
+    console.log('Starting file stream for:', documentId);
+
+
+    // Handle stream errors
+    fileStream.on('error', (error) => {
+      console.error('S3 Stream error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Error streaming file' });
+      }
+    });
+
+    res.on('error', (error) => {
+      console.error('Response stream error:', error);
+    });
+
+    res.on('close', () => {
+      console.log('Response closed for:', documentId);
+    });
+
+    fileStream.pipe(res).on('finish', () => {
+      console.log('Stream finished successfully for:', documentId);
+    }).on('error', (error) => {
+      console.error('Pipe error:', error);
+    });
   }
 
   @Get('preview/:documentId')

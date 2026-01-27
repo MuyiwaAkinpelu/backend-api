@@ -35,9 +35,11 @@ import {
 import { TokensEntity } from '@modules/auth/entities/tokens.entity';
 import { VerifyOTPDto } from '../dto/verify-otp.dto';
 import { TokenService } from '../token.service';
+import UserEntity from '@modules/user/entities/user.entity';
 import { PasswordResetService } from '../password-reset.service';
 import { RequestResetPasswordDto } from '../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { ResendInviteDto } from '../dto/resend-invite.dto';
 import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Auth')
@@ -57,13 +59,17 @@ export class AuthController {
   @Serialize(UserBaseEntity)
   @ApiOperation({ summary: 'Create user account' })
   @Post('sign-up')
-  create(@Body() signUpDto: SignUpDto): Promise<User> {
+  async create(
+    @Body() signUpDto: SignUpDto,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ): Promise<User> {
     const { password, ...rest } = signUpDto;
+    const tokenUser = userProxy ? await userProxy.get() : null;
 
     return this.authService.createAccount({
       ...rest,
       password: password || 'String!12345',
-    });
+    }, tokenUser?.id);
   }
 
   @Version('1')
@@ -146,6 +152,40 @@ export class AuthController {
     );
     return {
       message: 'Password reset email sent successfully',
+    };
+  }
+
+  @Version('1')
+  @SkipAuth()
+  @ApiOperation({ summary: 'Resend password reset email' })
+  @Post('password-reset/resend')
+  async resendPasswordReset(
+    @Body() requestResetPasswordDto: RequestResetPasswordDto,
+  ) {
+    await this.passwordResetService.requestPasswordReset(
+      requestResetPasswordDto.email,
+    );
+    return {
+      message: 'Password reset email resent successfully',
+    };
+  }
+
+  @Post('resend-invite')
+  @ApiBearerAuth()
+  @UseGuards(AccessGuard)
+  @ApiOperation({ summary: 'Resend account setup invite' })
+  @UseAbility(Actions.update, UserEntity)
+  async resendAccountSetupInvite(
+    @Body() resendInviteDto: ResendInviteDto,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const { id: performedBy } = await userProxy.get();
+    await this.authService.resendAccountSetupInvite(
+      resendInviteDto.userId,
+      performedBy,
+    );
+    return {
+      message: 'Account setup invite resent successfully',
     };
   }
 

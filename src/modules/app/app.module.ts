@@ -26,6 +26,7 @@ import { ProjectModule } from '@modules/project/project.module';
 import { AnalyticsModule } from '@modules/analytics/analytics.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ActivityLogsModule } from '@modules/activity-logs/activity-logs.module';
 
 @Module({
   controllers: [],
@@ -73,6 +74,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     FilesModule,
     ProjectModule,
     AnalyticsModule,
+    ActivityLogsModule,
   ],
   providers: [
     AuthTokenService,

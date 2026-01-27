@@ -16,6 +16,8 @@ export class FileEntity {
   readonly tags!: string[];
   readonly originalFilename!: string;
   readonly contentType!: string;
+  readonly views!: number;
+  readonly downloads!: number;
   readonly disapprovalReason!: string | null;
   readonly sharedWithIDs!: string[];
   readonly sharedWith!: UserBaseEntity[];

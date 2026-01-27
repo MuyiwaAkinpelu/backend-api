@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ProjectCategory } from '@prisma/client';
+import { ProjectCategory, Status } from '@prisma/client';
 import {
   IsArray,
   IsEnum,
@@ -63,4 +63,13 @@ export class UpdateProjectDTO {
   @IsArray()
   @IsString({ each: true })
   projectManagersIDs?: string[];
+
+  @ApiPropertyOptional({
+    description: 'The status of the project',
+    enum: Status,
+    example: Status.ACTIVE,
+  })
+  @IsOptional()
+  @IsEnum(Status)
+  status?: Status;
 }

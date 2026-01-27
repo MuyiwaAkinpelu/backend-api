@@ -50,9 +50,9 @@ export class SignUpDto {
   readonly password!: string;
 
   @ApiProperty({
-    description: 'The roles of the user. Defaults to ["GUEST"].',
+    description: 'The roles of the user. Defaults to ["NEW_STAFF"].',
     enum: Roles,
-    default: [Roles.GUEST],
+    default: [Roles.NEW_STAFF],
   })
   @IsEnum(Roles, { each: true })
   @ArrayUnique()

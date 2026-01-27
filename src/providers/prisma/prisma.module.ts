@@ -9,32 +9,18 @@ import { PrismaService } from './prisma.service';
 import { PrismaMiddleware } from './prisma.middleware';
 import { SearchModule } from '@modules/search/search.module';
 
-import { DocumentService } from '@modules/files/document.service';
-import { FileRepository } from '@modules/files/file.repository';
-import { ApprovalRequestRepository } from '@modules/project/approval-request.repository';
-import { UserRepository } from '@modules/user/user.repository';
-import { ProjectRepository } from '@modules/project/project.repository';
-import { MailService } from '@modules/mail/services/mail.service';
 import { MailModule } from '@modules/mail/mail.module';
 import { PrismaClient } from '@prisma/client';
-import { UploadService } from '@modules/files/upload.service';
+import { FilesModule } from '@modules/files/files.module';
 
 @Module({
   providers: [
     PrismaService,
     PrismaClient,
     PrismaMiddleware,
-
-    DocumentService,
-    UserRepository,
-    FileRepository,
-    ProjectRepository,
-    ApprovalRequestRepository,
-    MailService,
-    UploadService,
   ],
   exports: [PrismaService],
-  imports: [forwardRef(() => SearchModule), MailModule],
+  imports: [forwardRef(() => SearchModule), MailModule, forwardRef(() => FilesModule)],
 })
 export class PrismaModule {
   static forRoot(options: PrismaModuleOptions = {}): DynamicModule {

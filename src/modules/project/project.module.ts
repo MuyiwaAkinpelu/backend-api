@@ -9,16 +9,17 @@ import { FileRepository } from '@modules/files/file.repository';
 import { UserRepository } from '@modules/user/user.repository';
 import { CaslModule } from '@modules/casl';
 import { permissions } from './project.permissions';
+import { UserModule } from '@modules/user/user.module';
+import { FilesModule } from '@modules/files/files.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
-  imports: [CaslModule.forFeature({ permissions })],
+  imports: [CaslModule.forFeature({ permissions }), UserModule, forwardRef(() => FilesModule)],
   providers: [
     ProjectService,
     ApprovalRequestService,
     ProjectRepository,
     ApprovalRequestRepository,
-    FileRepository,
-    UserRepository,
   ],
   controllers: [ProjectController, ApprovalRequestController],
   exports: [ProjectRepository, ApprovalRequestRepository],

@@ -36,5 +36,8 @@
       "@types/*": ["./src/types/*"],
       "@constants/*": ["./src/constants/*"]
     }
+  },
+  "ts-node": {
+    "files": true
   }
 }

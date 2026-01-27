@@ -34,7 +34,15 @@ export class DocumentElasticIndex {
       index: documentIndex._index,
       id: docId,
     };
-    return await this.searchService.deleteDocument(data);
+    try {
+      return await this.searchService.deleteDocument(data);
+    } catch (error) {
+      // Silently ignore if document doesn't exist in Elasticsearch
+      if (error.meta?.body?.result === 'not_found') {
+        return { result: 'not_found', acknowledged: true };
+      }
+      throw error;
+    }
   }
 
   private bulkIndex(documentId: string): any {

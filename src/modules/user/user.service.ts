@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from '@modules/user/user.repository';
-import { Prisma, Roles, User } from '@prisma/client';
+import { Prisma, Roles, User, ActivityVerb, ActivityEntity, ActivityOutcome, SecurityEventType } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ActivityLogEvent } from '@modules/activity-logs/constants';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { USER_NOT_FOUND } from '@constants/errors.constants';
 import { UserFiltersDTO } from './dto/user-filters.dto';
@@ -8,7 +10,10 @@ import { ListUsersDTO } from './dto/users.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepository: UserRepository) { }
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly eventEmitter: EventEmitter2,
+  ) { }
 
   async findById(id: string): Promise<User> {
     const user = await this.userRepository.findById(id);
@@ -76,9 +81,9 @@ export class UserService {
     );
   }
 
-  findAllMembers(): Promise<User[]> {
+  findAllMembers(all?: boolean): Promise<User[]> {
     const where: Prisma.UserWhereInput = {
-      isActive: true,
+      ...(all !== true && { isActive: true }),
     };
     const select: Prisma.UserSelect = {
       id: true,
@@ -86,6 +91,11 @@ export class UserService {
       lastName: true,
       email: true,
       avatar: true,
+      isActive: true,
+      roles: true,
+      createdAt: true,
+      lastLogin: true,
+      department: true,
     };
     return this.userRepository.findAll(where, select);
   }
@@ -94,73 +104,176 @@ export class UserService {
    * Update a user by ID.
    * @param id The ID of the user to update.
    * @param data The updated user data.
+   * @param performedBy The ID of the user performing the update.
    * @returns The updated user.
    */
-  async updateUser(id: string, data: Prisma.UserUpdateInput): Promise<User> {
+  async updateUser(id: string, data: Prisma.UserUpdateInput, performedBy: string): Promise<User> {
     const user = await this.findById(id);
-    return this.userRepository.updateUser(id, data);
+    const updatedUser = await this.userRepository.updateUser(id, data);
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.USER,
+      entityId: id,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: null,
+      metadata: {
+        targetUserEmail: user.email,
+        updates: data,
+      },
+      occurredAt: new Date(),
+    });
+
+    return updatedUser;
   }
 
   /**
    * Delete a user by ID.
    * @param id The ID of the user to delete.
+   * @param performedBy The ID of the user performing the deletion.
    * @returns The deleted user.
    */
-  async deleteUser(id: string): Promise<User> {
+  async deleteUser(id: string, performedBy: string): Promise<User> {
     const user = await this.findById(id);
-    return this.userRepository.deleteUser(id);
+    const deletedUser = await this.userRepository.deleteUser(id);
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.DELETE,
+      entity: ActivityEntity.USER,
+      entityId: id,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: SecurityEventType.USER_DELETED,
+      metadata: {
+        targetUserEmail: user.email,
+      },
+      occurredAt: new Date(),
+    });
+    return deletedUser;
   }
 
   /**
    * Update the roles of a user.
    * @param userId The ID of the user to update.
    * @param roles The new roles to assign to the user.
+   * @param performedBy The ID of the user performing the update.
    * @returns The updated user.
    */
-  async updateUserRoles(userId: string, roles: Roles[]): Promise<User> {
+  async updateUserRoles(userId: string, roles: Roles[], performedBy: string): Promise<User> {
     const user = await this.findById(userId);
-    return this.userRepository.updateUser(userId, { roles });
+    const updatedUser = await this.userRepository.updateUser(userId, { roles });
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.USER,
+      entityId: userId,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: SecurityEventType.ROLE_CHANGE,
+      metadata: {
+        targetUserEmail: user.email,
+        newRoles: roles,
+      },
+      occurredAt: new Date(),
+    });
+    return updatedUser;
   }
 
   /**
    * Update the role of a user.
    * @param userId The ID of the user to update.
    * @param role The new role to assign to the user.
+   * @param performedBy The ID of the user performing the update.
    * @returns The updated user.
    */
-  async setUserRole(userId: string, role: Roles): Promise<User> {
+  async setUserRole(userId: string, role: Roles, performedBy: string): Promise<User> {
     const user = await this.findById(userId);
-    return this.userRepository.updateUser(userId, { roles: [role] });
+    const updatedUser = await this.userRepository.updateUser(userId, { roles: [role] });
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.USER,
+      entityId: userId,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: SecurityEventType.ROLE_CHANGE,
+      metadata: {
+        targetUserEmail: user.email,
+        newRole: role,
+      },
+      occurredAt: new Date(),
+    });
+    return updatedUser;
   }
 
   /**
-   * Activate a user by ID.
    * @param userId The ID of the user to activate.
+   * @param performedBy The ID of the user performing the activation.
    * @returns The updated user.
    */
-  async activateUser(userId: string): Promise<User> {
+  async activateUser(userId: string, performedBy: string): Promise<User> {
     const user = await this.userRepository.findById(userId);
-    return this.userRepository.updateUser(userId, { isActive: true });
+    const updatedUser = await this.userRepository.updateUser(userId, { isActive: true });
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.USER,
+      entityId: userId,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: null,
+      metadata: {
+        targetUserEmail: user.email,
+        action: 'ACTIVATED',
+      },
+      occurredAt: new Date(),
+    });
+    return updatedUser;
   }
 
   /**
-   * Deactivate a user by ID.
    * @param userId The ID of the user to deactivate.
+   * @param performedBy The ID of the user performing the deactivation.
    * @returns The updated user.
    */
-  async deactivateUser(userId: string): Promise<User> {
+  async deactivateUser(userId: string, performedBy: string): Promise<User> {
     const user = await this.userRepository.findById(userId);
-    return this.userRepository.updateUser(userId, { isActive: false });
+    const updatedUser = await this.userRepository.updateUser(userId, { isActive: false });
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.USER,
+      entityId: userId,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: SecurityEventType.USER_DEACTIVATED,
+      metadata: {
+        targetUserEmail: user.email,
+        action: 'DEACTIVATED',
+      },
+      occurredAt: new Date(),
+    });
+    return updatedUser;
   }
 
   /**
-   * Verify a user by ID.
    * @param userId The ID of the user to verify.
+   * @param performedBy The ID of the user performing the verification.
    * @returns The updated user.
    */
-  async verifyUser(userId: string): Promise<User> {
+  async verifyUser(userId: string, performedBy: string): Promise<User> {
     const user = await this.userRepository.findById(userId);
-    return this.userRepository.updateUser(userId, { isVerified: true });
+    const updatedUser = await this.userRepository.updateUser(userId, { isVerified: true });
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.USER,
+      entityId: userId,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: null,
+      metadata: {
+        targetUserEmail: user.email,
+        action: 'VERIFIED',
+      },
+      occurredAt: new Date(),
+    });
+    return updatedUser;
   }
 
   private buildWhereClause(filters: UserFiltersDTO) {

@@ -15,13 +15,13 @@ model User {
   lastName  String?
   password  String
   avatar    String?
-  roles     Roles[] @default([GUEST])
+  roles     Roles[] @default([NEW_STAFF])
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @default(now())
   lastLogin  DateTime?
   isVerified Boolean?  @default(false)
-  isActive   Boolean?  @default(false)
+  isActive   Boolean?  @default(true)
 
   department  String?
   designation String?
@@ -199,6 +199,7 @@ model Project {
 enum Status {
   ACTIVE
   INACTIVE
+  ARCHIVED
 }
 
 enum ActivityVerb {
@@ -232,6 +233,10 @@ model ActivityLog {
   userId String? @db.ObjectId
   user   User?   @relation(fields: [userId], references: [id])
 
+  actorId    String? 
+  actorName  String
+  actorEmail String?
+
   verb     ActivityVerb
   entity   ActivityEntity
   entityId String?        @db.ObjectId
@@ -264,6 +269,15 @@ model DailyUploadStat {
   updatedAt DateTime @updatedAt
 }
 
+model DailyDownloadStat {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  date      DateTime @unique
+  downloads Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model UserActivityDaily {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   date       DateTime
@@ -285,6 +299,7 @@ model ProjectDocumentStat {
   documentCount Int       @default(0)
   totalViews    Int       @default(0)
   totalUploads  Int       @default(0)
+  totalDownloads Int      @default(0)
   lastActivity  DateTime?
 
   updatedAt DateTime @updatedAt
@@ -307,6 +322,12 @@ enum SecurityEventType {
   UNAUTHORIZED_ACCESS
   PASSWORD_RESET
   ROLE_CHANGE
+  USER_DELETED
+  PROJECT_DELETED
+  DOCUMENT_DELETED
+  PERMISSION_CHANGE
+  USER_DEACTIVATED
+  
 }
 
 enum TokenUseCase {

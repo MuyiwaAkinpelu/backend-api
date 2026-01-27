@@ -46,34 +46,32 @@ export class DashboardService {
 
     private async getSystemAdminStats() {
         const [
-            totalDocuments,
-            pendingApprovals,
-            declinedApprovals,
-            totalDownloads,
+            docStats,
+            approvalStats,
             projects
         ] = await Promise.all([
-            this.docAnalytics.getMetricWithTrend({ approvalRequests: { some: {} } }),
-            this.approvalAnalytics.getMetricWithTrend({ status: ApprovalStatus.PENDING }),
-            this.approvalAnalytics.getMetricWithTrend({ status: ApprovalStatus.DECLINED }),
-            this.docAnalytics.totalDownloads(),
+            this.docAnalytics.getSummaryStats({ approvalRequests: { some: {} } }),
+            this.approvalAnalytics.getSummaryStats(),
             this.projectAnalytics.getProjects(3)
         ]);
 
-        // Parallelize all remaining heavy calls for the return object
+        const projectIds = projects.map(p => p.id);
         const [
             recentGlobalApprovedUploads,
             approvedRequests,
             mostViewed,
-            recentApprovedMetric
+            recentApprovedMetric,
+            projectsStats
         ] = await Promise.all([
             this.docAnalytics.recentUploads(6, { approvalRequests: { some: { status: ApprovalStatus.APPROVED } } }),
             this.approvalAnalytics.recentApproved(6),
             this.docAnalytics.mostViewed(6, { approvalRequests: { some: { status: ApprovalStatus.APPROVED } } }),
-            this.docAnalytics.getMetricWithTrend({ approvalRequests: { some: { status: ApprovalStatus.APPROVED } } }, true)
+            this.docAnalytics.getMetricWithTrend({ approvalRequests: { some: { status: ApprovalStatus.APPROVED } } }, true),
+            this.projectAnalytics.getProjectsStatsBatch(projectIds)
         ]);
 
-        const projectsWithStats = await Promise.all(projects.map(async p => {
-            const stats = await this.projectAnalytics.getProjectStats(p.id);
+        const projectsWithStats = projects.map(p => {
+            const stats = projectsStats.get(p.id);
             return {
                 ...p,
                 documentCount: stats.totalSubmitted,
@@ -86,17 +84,17 @@ export class DashboardService {
                     ? `${stats.pending}:${stats.approved}`
                     : `${stats.pending}:0`
             };
-        }));
+        });
 
         return {
             success: true,
             data: {
                 cards: {
-                    totalDocuments,
-                    pendingApprovals,
-                    declinedApprovals,
+                    totalDocuments: docStats.totalDocuments,
+                    pendingApprovals: approvalStats.pending,
+                    declinedApprovals: approvalStats.declined,
                     recentUploads: recentApprovedMetric,
-                    totalDownloads
+                    totalDownloads: docStats.totalDownloads
                 },
                 projects: projectsWithStats,
                 dynamicColumn: {
@@ -114,21 +112,36 @@ export class DashboardService {
         const projectIds = [...(user.projectManagerProjectIDs || []), ...(user.projectMemberProjectIDs || [])];
 
         const [
-            totalDocuments,
-            pendingApprovals,
-            declinedApprovals,
-            totalDownloads,
+            docStats,
+            approvalStats,
             projects
         ] = await Promise.all([
-            this.docAnalytics.getMetricWithTrend({ projectsIDs: { hasSome: projectIds }, approvalRequests: { some: {} } }),
-            this.approvalAnalytics.getMetricWithTrend({ projectId: { in: projectIds }, status: ApprovalStatus.PENDING }),
-            this.approvalAnalytics.getMetricWithTrend({ projectId: { in: projectIds }, status: ApprovalStatus.DECLINED }),
-            this.docAnalytics.totalDownloads({ projectsIDs: { hasSome: projectIds } }),
+            this.docAnalytics.getSummaryStats({ projectsIDs: { hasSome: projectIds }, approvalRequests: { some: {} } }),
+            this.approvalAnalytics.getSummaryStats({ projectId: { in: projectIds } }),
             this.projectAnalytics.getProjects(3, { id: { in: projectIds } })
         ]);
 
-        const projectsWithStats = await Promise.all(projects.map(async p => {
-            const stats = await this.projectAnalytics.getProjectStats(p.id);
+        const dashboardProjectIds = projects.map(p => p.id);
+        const [
+            recentApprovedUploads,
+            mostViewed,
+            recentApprovedGlobal,
+            recentUploadsMetric,
+            projectsStats
+        ] = await Promise.all([
+            this.docAnalytics.recentUploads(6, {
+                approvalRequests: { some: { status: ApprovalStatus.APPROVED } }
+            }),
+            this.docAnalytics.mostViewed(6, {
+                approvalRequests: { some: { status: ApprovalStatus.APPROVED } }
+            }),
+            this.approvalAnalytics.recentApproved(6),
+            this.docAnalytics.getMetricWithTrend({ projectsIDs: { hasSome: projectIds }, approvalRequests: { some: { status: ApprovalStatus.APPROVED } } }, true),
+            this.projectAnalytics.getProjectsStatsBatch(dashboardProjectIds)
+        ]);
+
+        const projectsWithStats = projects.map(p => {
+            const stats = projectsStats.get(p.id);
 
             return {
                 ...p,
@@ -142,40 +155,22 @@ export class DashboardService {
                     ? `${stats.pending}:${stats.approved}`
                     : `${stats.pending}:0`
             };
-        }));
-
-        const [
-            recentApprovedUploads,
-            mostViewed,
-            recentApprovedInProjects,
-            recentUploadsMetric
-        ] = await Promise.all([
-            this.docAnalytics.recentUploads(6, {
-                projectsIDs: { hasSome: projectIds },
-                approvalRequests: { some: { status: ApprovalStatus.APPROVED } }
-            }),
-            this.docAnalytics.mostViewed(6, {
-                projectsIDs: { hasSome: projectIds },
-                approvalRequests: { some: { status: ApprovalStatus.APPROVED } }
-            }),
-            this.approvalAnalytics.recentApproved(6, { projectId: { in: projectIds } }),
-            this.docAnalytics.getMetricWithTrend({ projectsIDs: { hasSome: projectIds }, approvalRequests: { some: { status: ApprovalStatus.APPROVED } } }, true)
-        ]);
+        });
 
         return {
             success: true,
             data: {
                 cards: {
-                    totalDocuments,
-                    pendingApprovals: pendingApprovals,
-                    declinedApprovals: declinedApprovals,
+                    totalDocuments: docStats.totalDocuments,
+                    pendingApprovals: approvalStats.pending,
+                    declinedApprovals: approvalStats.declined,
                     recentUploads: recentUploadsMetric,
-                    totalDownloads
+                    totalDownloads: docStats.totalDownloads
                 },
                 projects: projectsWithStats,
                 dynamicColumn: {
                     title: "Recently Approved",
-                    data: recentApprovedInProjects
+                    data: recentApprovedGlobal
                 },
                 recentUploads: recentApprovedUploads,
                 mostViewed
@@ -187,15 +182,11 @@ export class DashboardService {
         const projectIds = user.projectMemberProjectIDs || [];
 
         const [
-            myTotalDocuments,
-            myPendingDocs,
-            myDeclinedDocs,
-            myApprovedDocs
+            docStats,
+            submissionStats
         ] = await Promise.all([
-            this.docAnalytics.getMetricWithTrend({ uploaderId: user.id, approvalRequests: { some: {} } }),
-            this.approvalAnalytics.getMetricWithTrend({ submittedById: user.id, status: ApprovalStatus.PENDING }),
-            this.approvalAnalytics.getMetricWithTrend({ submittedById: user.id, status: ApprovalStatus.DECLINED }),
-            this.approvalAnalytics.getMetricWithTrend({ submittedById: user.id, status: ApprovalStatus.APPROVED })
+            this.docAnalytics.getSummaryStats({ uploaderId: user.id, approvalRequests: { some: {} } }),
+            this.approvalAnalytics.getSummaryStats({ submittedById: user.id })
         ]);
 
         const affiliatedProjectsCount = projectIds.length;
@@ -214,8 +205,11 @@ export class DashboardService {
             this.docAnalytics.getMetricWithTrend({ uploaderId: user.id, approvalRequests: { some: { status: ApprovalStatus.APPROVED } } }, true)
         ]);
 
-        const projectsWithStats = await Promise.all(projects.map(async p => {
-            const stats = await this.projectAnalytics.getProjectStats(p.id);
+        const dashboardProjectIds = projects.map(p => p.id);
+        const projectsStats = await this.projectAnalytics.getProjectsStatsBatch(dashboardProjectIds);
+
+        const projectsWithStats = projects.map(p => {
+            const stats = projectsStats.get(p.id);
             return {
                 ...p,
                 documentCount: stats.totalSubmitted,
@@ -228,16 +222,16 @@ export class DashboardService {
                     ? `${stats.pending}:${stats.approved}`
                     : `${stats.pending}:0`
             };
-        }));
+        });
 
         return {
             success: true,
             data: {
                 cards: {
-                    myTotalDocuments: myTotalDocuments,
-                    myPendingDocs: myPendingDocs,
-                    myDeclinedDocs: myDeclinedDocs,
-                    myApprovedDocs: myApprovedDocs,
+                    myTotalDocuments: docStats.totalDocuments,
+                    myPendingDocs: submissionStats.pending,
+                    myDeclinedDocs: submissionStats.declined,
+                    myApprovedDocs: submissionStats.approved,
                     myRecentUploads: myRecentUploadsMetric,
                     affiliatedProjects: affiliatedProjectsCount
                 },
@@ -254,14 +248,14 @@ export class DashboardService {
 
     private async getNewStaffStats(user: User) {
         // "Basic Staff"
-        const totalDocuments = await this.docAnalytics.getMetricWithTrend({ approvalRequests: { some: {} } });
+        const docStats = await this.docAnalytics.getSummaryStats({ approvalRequests: { some: {} } });
         const activeProjects = await this.projectAnalytics.activeProjects();
 
         return {
             success: true,
             data: {
                 landingCards: {
-                    totalDocuments,
+                    totalDocuments: docStats.totalDocuments,
                     activeProjects
                 }
             }

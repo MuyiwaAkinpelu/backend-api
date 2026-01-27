@@ -6,7 +6,10 @@ import { UserService } from '@modules/user/user.service';
 import { Request } from 'express';
 import { Roles } from '@prisma/client';
 import { UploadTrendsDTO, UserActivityDTO } from '../dtos/analytics.dto';
+import { SkipThrottle } from '@nestjs/throttler';
+import { AccessGuard, Actions, UseAbility } from '@modules/casl';
 
+@SkipThrottle()
 @Controller('analytics')
 export class AnalyticsController {
     constructor(
@@ -31,20 +34,12 @@ export class AnalyticsController {
 
     @Get('upload-trends')
     getUploadTrends(@Query() dto: UploadTrendsDTO) {
-        const to = new Date();
-        const from = new Date();
-        from.setDate(to.getDate() - 30);
-        // Using 'CUSTOM' period as we are calculating specific dates here for the default view
-        // Or if DTO has period, use it. But for now matching the manual date logic.
-        return this.analyticsService.getUploadTrends('CUSTOM', from, to);
+        return this.analyticsService.getUploadTrends(dto.period, dto.from, dto.to);
     }
 
     @Get('user-activity')
     getUserActivity(@Query() dto: UserActivityDTO) {
-        const to = new Date();
-        const from = new Date();
-        from.setDate(to.getDate() - 7);
-        return this.analyticsService.getUserActivity(from, to);
+        return this.analyticsService.getUserActivityByTimeframe(dto.timeframe);
     }
 
     @Get('security-audit')
@@ -54,8 +49,16 @@ export class AnalyticsController {
         from.setDate(to.getDate() - 30);
         return this.analyticsService.getSecurityAudit(from, to);
     }
+
+    @Get('audit-logs')
+    getAuditLogs() {
+        return this.analyticsService.getAuditLogs();
+    }
+
     @Get('overview')
     @UseGuards(AuthGuard)
+    // @UseGuards(AccessGuard)
+    // @UseAbility(Actions.read, Analytics)
     async getAdminAnalytics(@Req() req: any) {
         const userId = req.user?.id;
         if (!userId) {

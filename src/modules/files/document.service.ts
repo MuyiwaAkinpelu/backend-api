@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DocumentVisibility, File, Prisma, ApprovalStatus } from '@prisma/client';
+import { DocumentVisibility, File, Prisma, ApprovalStatus, Roles, ActivityVerb, ActivityEntity, ActivityOutcome, SecurityEventType } from '@prisma/client';
 import { PrismaService } from '@providers/prisma';
 import { DocumentSearchObject } from '@modules/search/objects/document.search.object';
 import { SearchService } from '@modules/search/search.service';
@@ -12,6 +12,8 @@ import { ApprovalRequestRepository } from '../project/approval-request.repositor
 import { UserRepository } from '@modules/user/user.repository';
 import { ProjectRepository } from '@modules/project/project.repository';
 import { ListDocumentsDTO } from './dto/list-documents.dto';
+import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
+import { ActivityLogEvent } from '@modules/activity-logs/constants';
 
 @Injectable()
 export class DocumentService {
@@ -24,6 +26,7 @@ export class DocumentService {
     private readonly approvalRequestRepository: ApprovalRequestRepository,
     private readonly userRepository: UserRepository,
     private readonly projectRepository: ProjectRepository,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new Logger(DocumentService.name);
   }
@@ -89,6 +92,17 @@ export class DocumentService {
       where: { id },
       data: { downloads: { increment: 1 } },
     });
+  }
+
+  @OnEvent(ActivityLogEvent.DOCUMENT_DOWNLOADED, { async: true })
+  async handleDocumentDownloaded(documentId: string) {
+    try {
+      console.log('Document downloaded:', documentId);
+
+      await this.incrementDownload(documentId);
+    } catch (error) {
+      this.logger.error("Failed to increment download count", error);
+    }
   }
 
   async getDocuments(
@@ -315,20 +329,68 @@ export class DocumentService {
     return renamedDocument;
   }
 
-  async deleteDocument(id: string) {
-    await this.getDocumentById(id);
-    await this.prisma.$transaction(async (prisma) => {
-      // Delete related approval requests first
-      await prisma.approvalRequest.deleteMany({
-        where: { documentId: id },
+  async deleteDocument(id: string, performedBy: string) {
+    const document = await this.getDocumentById(id);
+
+    const requests = await this.prisma.approvalRequest.findMany({
+      where: { documentId: id },
+      select: { status: true },
+    });
+
+    let approvalStatus = 'DRAFT';
+    if (requests.length > 0) {
+      if (requests.some(r => r.status === ApprovalStatus.APPROVED)) approvalStatus = 'APPROVED';
+      else if (requests.some(r => r.status === ApprovalStatus.PENDING)) approvalStatus = 'PENDING';
+      else if (requests.some(r => r.status === ApprovalStatus.DECLINED)) approvalStatus = 'DECLINED';
+    }
+
+    try {
+      await this.prisma.$transaction(async (prisma) => {
+        // Delete related approval requests first
+        await prisma.approvalRequest.deleteMany({
+          where: { documentId: id },
+        });
+
+        // Now delete the document
+        await prisma.file.delete({
+          where: { id: id },
+        });
       });
 
-      // Now delete the document
-      await prisma.file.delete({
-        where: { id },
+      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+        userId: performedBy,
+        verb: ActivityVerb.DELETE,
+        entity: ActivityEntity.FILE,
+        entityId: id,
+        outcome: ActivityOutcome.SUCCESS,
+        securityEvent: SecurityEventType.DOCUMENT_DELETED,
+        metadata: {
+          filename: document.originalFilename,
+          approvalStatus: approvalStatus,
+          projectsIDs: document.projectsIDs,
+        },
+        occurredAt: new Date(),
       });
-    });
-    return { message: 'Document deleted successfully' };
+
+      return { message: 'Document deleted successfully' };
+    } catch (error) {
+      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+        userId: performedBy,
+        verb: ActivityVerb.DELETE,
+        entity: ActivityEntity.FILE,
+        entityId: id,
+        outcome: ActivityOutcome.FAILURE,
+        securityEvent: SecurityEventType.DOCUMENT_DELETED,
+        metadata: {
+          filename: document.originalFilename,
+          approvalStatus: approvalStatus,
+          projectsIDs: document.projectsIDs,
+          error: error.message
+        },
+        occurredAt: new Date(),
+      });
+      throw error;
+    }
   }
 
   private async buildWhereClause(filters: any) {

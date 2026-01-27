@@ -10,7 +10,7 @@ import { Injectable, Inject, Logger, forwardRef } from '@nestjs/common';
 import { DocumentElasticIndex } from '@modules/search/search-index/document.elastic.index';
 import { MailService } from '@modules/mail/services/mail.service';
 import { UploadService } from '@modules/files/upload.service';
-import { extractKeywords, extractDescription } from 'src/common/utils';
+import { extractKeywords, extractDescription } from '../../common/utils';
 
 @Injectable()
 export class PrismaMiddleware {
@@ -80,6 +80,22 @@ export class PrismaMiddleware {
           if (process.env.IS_SEEDING === 'true') {
             return result;
           }
+
+          // Skip expensive text extraction if only updating counter fields
+          const updateData = params.args.data || {};
+          const updatingCountersOnly =
+            (updateData.downloads || updateData.views) &&
+            Object.keys(updateData).every((key) =>
+              ['downloads', 'views'].includes(key),
+            );
+
+          if (updatingCountersOnly) {
+            console.log('Skipping text extraction and ES update for counter-only updates');
+
+            // Skip text extraction and ES update for counter-only updates
+            return result;
+          }
+
           const content = await this.uploadService.extractTextFromFile(
             result.filename,
             result.contentType,

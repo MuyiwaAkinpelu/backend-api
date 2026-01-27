@@ -39,3 +39,14 @@ export function extractKeywords(filename: string): string[] {
         .map((kw) => kw.toLowerCase())
         .filter(Boolean);
 }
+
+export function normalizeIp(ip?: string): string | undefined {
+    if (!ip) return ip;
+
+    // Handle IPv4-mapped IPv6
+    if (ip.startsWith('::ffff:')) {
+        return ip.replace('::ffff:', '');
+    }
+
+    return ip;
+}

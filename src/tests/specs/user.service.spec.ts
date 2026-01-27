@@ -50,10 +50,22 @@ describe('UserService', () => {
         PrismaService,
         UploadService,
         PrismaMiddleware,
-        DocumentElasticIndex,
+        {
+          provide: DocumentElasticIndex,
+          useValue: {
+            insertFileDocument: jest.fn(),
+            updateFileDocument: jest.fn(),
+            deleteFileDocument: jest.fn(),
+            syncAllDocuments: jest.fn(),
+          },
+        },
         {
           provide: 'SearchServiceInterface',
-          useClass: SearchService,
+          useValue: { searchIndex: jest.fn(), insertIndex: jest.fn() },
+        },
+        {
+          provide: SearchService,
+          useValue: { searchIndex: jest.fn(), insertIndex: jest.fn() },
         },
         PrismaClient,
       ],
@@ -152,6 +164,38 @@ describe('UserService', () => {
             skip: 0,
           }),
         ).toStrictEqual(paginatedData);
+      });
+    });
+  });
+
+  describe('when the findAllMembers method is calling', () => {
+    let usersMock: User[];
+
+    beforeEach(async () => {
+      usersMock = createUsers(5);
+    });
+
+    describe('and no parameters are provided', () => {
+      it('should return only active members', async () => {
+        mockUserRepository.findAll.mockReturnValueOnce(usersMock);
+        const result = await userService.findAllMembers();
+        expect(userRepository.findAll).toHaveBeenCalledWith(
+          expect.objectContaining({ isActive: true }),
+          expect.any(Object),
+        );
+        expect(result).toStrictEqual(usersMock);
+      });
+    });
+
+    describe('and the all parameter is true', () => {
+      it('should return all members regardless of status', async () => {
+        mockUserRepository.findAll.mockReturnValueOnce(usersMock);
+        const result = await userService.findAllMembers(true);
+        expect(userRepository.findAll).toHaveBeenCalledWith(
+          expect.not.objectContaining({ isActive: true }),
+          expect.any(Object),
+        );
+        expect(result).toStrictEqual(usersMock);
       });
     });
   });
