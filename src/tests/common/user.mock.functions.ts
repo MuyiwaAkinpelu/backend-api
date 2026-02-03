@@ -1,9 +1,16 @@
 import { SignUpDto } from '@modules/auth/dto/sign-up.dto';
 import { faker } from '@faker-js/faker';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import PaginatedResult = PaginatorTypes.PaginatedResult;
 import { Roles } from '@modules/app/app.roles';
+
+export type UserWithRelations = Prisma.UserGetPayload<{
+  include: {
+    notificationPreference: true;
+    notifications: true;
+  };
+}>;
 
 export function getSignUpData(email?: string): SignUpDto {
   return {
@@ -32,10 +39,10 @@ export function getPaginatedData<T>(input: T[]): PaginatedResult<T> {
   };
 }
 
-export function createUsers(length: number): User[] {
-  const result: User[] = [];
+export function createUsers(length: number): UserWithRelations[] {
+  const result: UserWithRelations[] = [];
   for (let i = 0; i < length; i++) {
-    const user: User = {
+    const user: UserWithRelations = {
       id: faker.string.alphanumeric({ length: 12 }),
       ...getSignUpData(),
       phone: null,
@@ -48,7 +55,20 @@ export function createUsers(length: number): User[] {
       isActive: true,
       projectMemberProjectIDs: [],
       projectManagerProjectIDs: [],
-      lastLogin: undefined,
+      lastLogin: null,
+      isOnline: false,
+      lastSeen: faker.date.anytime(),
+      notifications: [],
+      notificationPreference: {
+        id: faker.string.alphanumeric({ length: 12 }),
+        userId: '', // Will be set if needed
+        email: true,
+        push: true,
+        updates: true,
+        approvals: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     };
     result.push(user);
   }

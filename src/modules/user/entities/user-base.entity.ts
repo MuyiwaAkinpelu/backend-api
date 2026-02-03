@@ -3,6 +3,7 @@ import { Exclude, Expose } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import UserEntity from '@modules/user/entities/user.entity';
 import { Roles } from '@modules/app/app.roles';
+import { Notification, NotificationPreference } from '@prisma/client';
 
 @Exclude()
 export default class UserBaseEntity extends PartialType(UserEntity) {
@@ -63,4 +64,17 @@ export default class UserBaseEntity extends PartialType(UserEntity) {
 
   @Expose()
   readonly projectManagerProjects: any[];
+
+  @Expose()
+  readonly isOnline: boolean;
+
+  @Expose()
+  readonly lastSeen: Date;
+
+  @ApiProperty({ type: Object })
+  @Expose()
+  readonly notificationPreference: NotificationPreference;
+
+  @Expose()
+  readonly notifications: Notification[];
 }

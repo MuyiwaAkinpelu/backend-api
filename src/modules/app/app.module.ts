@@ -27,6 +27,8 @@ import { AnalyticsModule } from '@modules/analytics/analytics.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ActivityLogsModule } from '@modules/activity-logs/activity-logs.module';
+import { NotificationModule } from '@modules/notification/notification.module';
+
 
 @Module({
   controllers: [],
@@ -75,6 +77,7 @@ import { ActivityLogsModule } from '@modules/activity-logs/activity-logs.module'
     ProjectModule,
     AnalyticsModule,
     ActivityLogsModule,
+    NotificationModule,
   ],
   providers: [
     AuthTokenService,

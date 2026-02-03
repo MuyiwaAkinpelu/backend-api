@@ -1,4 +1,4 @@
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import {
   AWS_S3_BUCKET,
@@ -156,6 +156,13 @@ export class UploadService {
                 status: ApprovalStatus.APPROVED,
               },
             },
+            // projects: {
+            //   connect: {
+            //     id: projectId,
+            //   },
+            // },
+          }),
+          ...(projectId && {
             projects: {
               connect: {
                 id: projectId,
@@ -180,6 +187,10 @@ export class UploadService {
         },
         occurredAt: new Date(),
       });
+
+      if (projectId) {
+        this.eventEmitter.emit('project.updated', { projectId });
+      }
 
       return savedFile;
     } catch (error) {
@@ -253,10 +264,13 @@ export class UploadService {
     return response.Body as Readable;
   }
 
-  // async incrementDownloadCount(documentId: string) {
-  //   return this.prisma.file.update({
-  //     where: { id: documentId },
-  //     data: { downloads: { increment: 1 } },
-  //   });
-  // }
+  async deleteFile(fileUrl: string): Promise<void> {
+    const fileKey = fileUrl.split('/').pop();
+    const deleteObjectCommand = new DeleteObjectCommand({
+      Bucket: this.configService.getOrThrow(AWS_S3_BUCKET),
+      Key: fileKey,
+    });
+
+    await this.s3Client.send(deleteObjectCommand);
+  }
 }

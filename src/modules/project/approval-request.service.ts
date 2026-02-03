@@ -187,7 +187,10 @@ export class ApprovalRequestService {
         // Emit log
         const fullRequest = await this.prisma.approvalRequest.findUnique({
           where: { id: requestId },
-          include: { document: { select: { originalFilename: true } } }
+          include: {
+            document: { select: { originalFilename: true } },
+            project: { select: { name: true } }
+          }
         });
 
         this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
@@ -202,6 +205,13 @@ export class ApprovalRequestService {
             projectId: request.projectId,
           },
           occurredAt: new Date(),
+        });
+
+        this.eventEmitter.emit('approval.status_changed', {
+          userId: request.submittedById,
+          status: 'APPROVED',
+          projectName: (fullRequest as any)?.project?.name,
+          requestId: requestId,
         });
 
         return updatedRequest;
@@ -257,7 +267,10 @@ export class ApprovalRequestService {
     // Emit log
     const fullRequest = await this.prisma.approvalRequest.findUnique({
       where: { id: requestId },
-      include: { document: { select: { originalFilename: true } } }
+      include: {
+        document: { select: { originalFilename: true } },
+        project: { select: { name: true } }
+      }
     });
 
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
@@ -273,6 +286,13 @@ export class ApprovalRequestService {
         reason: disapprovalReason,
       },
       occurredAt: new Date(),
+    });
+
+    this.eventEmitter.emit('approval.status_changed', {
+      userId: request.submittedById,
+      status: 'DECLINED',
+      projectName: (fullRequest as any)?.project?.name,
+      requestId: requestId,
     });
 
     return updatedRequest;
@@ -330,6 +350,193 @@ export class ApprovalRequestService {
     }
 
     await this.approvalRequestRepository.delete(requestId);
+  }
+
+  async bulkApproveRequests(
+    requestIds: string[],
+    userId: string,
+  ): Promise<{
+    successful: ApprovalRequest[];
+    failed: Array<{ requestId: string; error: string }>;
+  }> {
+    const successful: ApprovalRequest[] = [];
+    const failed: Array<{ requestId: string; error: string }> = [];
+
+    // Validate user existence once
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException(USER_NOT_FOUND);
+    }
+
+    for (const requestId of requestIds) {
+      try {
+        // Validate request existence
+        const request = await this.approvalRequestRepository.findById(requestId);
+        if (!request) {
+          failed.push({ requestId, error: REQUEST_NOT_FOUND });
+          continue;
+        }
+
+        if (!user.roles.includes(Roles.SYSTEM_ADMIN)) {
+          // Validate project existence and user membership (as manager)
+          const isUserManagerOfProject =
+            await this.projectRepository.isUserManagerOfProject(
+              request.projectId,
+              userId,
+            );
+          if (!isUserManagerOfProject) {
+            failed.push({ requestId, error: USER_NOT_MANAGER });
+            continue;
+          }
+        }
+
+        // Perform operations within a transaction
+        const updatedRequest = await this.prisma.$transaction(
+          async (transactionClient) => {
+            // Associate the document with the project
+            await this.projectRepository.addDocumentToProject(
+              request.projectId,
+              request.documentId,
+              transactionClient,
+            );
+
+            // Update the approval request status
+            const updated = await this.approvalRequestRepository.update(
+              requestId,
+              {
+                status: ApprovalStatus.APPROVED,
+                approvedBy: {
+                  connect: {
+                    id: userId,
+                  },
+                },
+              },
+              transactionClient,
+            );
+
+            return updated;
+          },
+          { timeout: 20000 },
+        );
+
+        // Emit log
+        const fullRequest = await this.prisma.approvalRequest.findUnique({
+          where: { id: requestId },
+          include: { document: { select: { originalFilename: true } } }
+        });
+
+        this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+          userId: userId,
+          verb: ActivityVerb.APPROVE,
+          entity: ActivityEntity.APPROVAL,
+          entityId: requestId,
+          outcome: ActivityOutcome.SUCCESS,
+          securityEvent: null,
+          metadata: {
+            documentName: fullRequest?.document?.originalFilename,
+            projectId: request.projectId,
+            bulkOperation: true,
+          },
+          occurredAt: new Date(),
+        });
+
+        successful.push(updatedRequest);
+      } catch (error) {
+        failed.push({
+          requestId,
+          error: error.message || 'Unknown error occurred',
+        });
+      }
+    }
+
+    return { successful, failed };
+  }
+
+  async bulkDeclineRequests(
+    requestIds: string[],
+    userId: string,
+    disapprovalReason?: string,
+  ): Promise<{
+    successful: ApprovalRequest[];
+    failed: Array<{ requestId: string; error: string }>;
+  }> {
+    const successful: ApprovalRequest[] = [];
+    const failed: Array<{ requestId: string; error: string }> = [];
+
+    // Validate user existence once
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException(USER_NOT_FOUND);
+    }
+
+    for (const requestId of requestIds) {
+      try {
+        // Validate request existence
+        const request = await this.approvalRequestRepository.findById(requestId);
+        if (!request) {
+          failed.push({ requestId, error: REQUEST_NOT_FOUND });
+          continue;
+        }
+
+        if (!user.roles.includes(Roles.SYSTEM_ADMIN)) {
+          // Validate project existence and user membership (as manager)
+          const isUserManagerOfProject =
+            await this.projectRepository.isUserManagerOfProject(
+              request.projectId,
+              userId,
+            );
+          if (!isUserManagerOfProject) {
+            failed.push({ requestId, error: USER_NOT_MANAGER });
+            continue;
+          }
+        }
+
+        // Update the approval request status
+        const updatedRequest = await this.approvalRequestRepository.update(
+          requestId,
+          {
+            status: ApprovalStatus.DECLINED,
+            disapprovalReason,
+            disapprovedBy: {
+              connect: {
+                id: userId,
+              },
+            },
+          },
+        );
+
+        // Emit log
+        const fullRequest = await this.prisma.approvalRequest.findUnique({
+          where: { id: requestId },
+          include: { document: { select: { originalFilename: true } } }
+        });
+
+        this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+          userId: userId,
+          verb: ActivityVerb.DECLINE,
+          entity: ActivityEntity.APPROVAL,
+          entityId: requestId,
+          outcome: ActivityOutcome.SUCCESS,
+          securityEvent: null,
+          metadata: {
+            documentName: fullRequest?.document?.originalFilename,
+            projectId: request.projectId,
+            reason: disapprovalReason,
+            bulkOperation: true,
+          },
+          occurredAt: new Date(),
+        });
+
+        successful.push(updatedRequest);
+      } catch (error) {
+        failed.push({
+          requestId,
+          error: error.message || 'Unknown error occurred',
+        });
+      }
+    }
+
+    return { successful, failed };
   }
 
   private buildWhereClause(filters: RequestsFiltersDTO) {

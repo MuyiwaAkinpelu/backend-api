@@ -61,7 +61,8 @@ export class ApprovalAnalyticsService {
             take: limit,
             include: {
                 document: { select: { originalFilename: true, id: true, filename: true } },
-                approvedBy: { select: { firstName: true, lastName: true } }
+                approvedBy: { select: { firstName: true, lastName: true } },
+                project: { select: { name: true, id: true } }
             }
         });
     }

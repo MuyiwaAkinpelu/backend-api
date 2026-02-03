@@ -17,6 +17,7 @@ import {
   UploadedFiles,
   Res,
   Optional,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiExtraModels,
@@ -140,7 +141,10 @@ export class DocumentController {
     const tokenUser = await userProxy.get();
 
     // console.log(files);
-    // console.log(tags);
+    console.log(projectId);
+    if (!projectId) {
+      throw new BadRequestException('Project ID is required');
+    }
     await this.uploadService.upload(
       files,
       tags,

@@ -9,7 +9,7 @@ import { ActivityLogSortableColumns } from '@modules/activity-logs/types';
 import { Order } from '@constants/order.constants';
 import { ActivityTimeframe, TrendPeriod, LogStatus } from '../constants/analytics.enums';
 import { ApprovalStatus, ProjectCategory, Roles } from '@prisma/client';
-import { format } from 'date-fns';
+import { format, subDays, subMonths, subYears, startOfDay, endOfDay, isSameDay, isSameMonth, isSameYear, startOfMonth, startOfQuarter, startOfYear } from 'date-fns';
 import { ActivityLogsDTO } from '@modules/activity-logs/dtos/activity-logs.dto';
 
 @Injectable()
@@ -179,31 +179,93 @@ export class AnalyticsService {
   }
 
   async getUserActivityByTimeframe(timeframe: ActivityTimeframe) {
-    const to = new Date();
-    const from = new Date();
+    const to = endOfDay(new Date());
+    let from = startOfDay(new Date());
 
     switch (timeframe) {
-      case ActivityTimeframe.WEEKLY: from.setDate(to.getDate() - 7); break;
-      case ActivityTimeframe.BIWEEKLY: from.setDate(to.getDate() - 14); break;
-      case ActivityTimeframe.MONTHLY: from.setMonth(from.getMonth() - 1); break;
-      case ActivityTimeframe.QUARTERLY: from.setMonth(from.getMonth() - 3); break;
-      case ActivityTimeframe.YEARLY: from.setFullYear(from.getFullYear() - 1); break;
-      default: from.setDate(to.getDate() - 7);
+      case ActivityTimeframe.WEEKLY: from = startOfDay(subDays(to, 6)); break;
+      case ActivityTimeframe.BIWEEKLY: from = startOfDay(subDays(to, 83)); break; // 12 weeks (6 periods of 14 days)
+      case ActivityTimeframe.MONTHLY: from = startOfMonth(subMonths(to, 5)); break;
+      case ActivityTimeframe.QUARTERLY: from = startOfQuarter(subMonths(to, 11)); break;
+      case ActivityTimeframe.YEARLY: from = startOfYear(subYears(to, 3)); break;
+      default: from = startOfDay(subDays(to, 6));
     }
 
     const rows = await this.activityRepo.findGrouped(from, to);
 
-    // Group by day for more detailed line chart labels
-    const dailyMap = new Map<string, number>();
-    rows.forEach(row => {
-      const dateKey = row.date.toISOString().slice(0, 10); // YYYY-MM-DD
-      dailyMap.set(dateKey, (dailyMap.get(dateKey) || 0) + 1);
-    });
+    if (timeframe === ActivityTimeframe.WEEKLY) {
+      const data = [];
+      for (let i = 0; i < 7; i++) {
+        const d = subDays(to, 6 - i);
+        const active = rows.filter(r => isSameDay(r.date, d)).length;
+        data.push({ label: format(d, 'MMM dd'), active });
+      }
+      return data;
+    }
 
-    return Array.from(dailyMap.entries()).map(([date, active]) => ({
-      label: format(new Date(date), 'MMM dd'),
-      active
-    })).sort((a, b) => a.label.localeCompare(b.label));
+    if (timeframe === ActivityTimeframe.BIWEEKLY) {
+      const data = [];
+      for (let i = 0; i < 6; i++) {
+        const periodStart = startOfDay(subDays(to, 83 - (i * 14)));
+        const periodEnd = endOfDay(subDays(periodStart, -13));
+        const active = new Set(
+          rows.filter(r => r.date >= periodStart && r.date <= periodEnd)
+            .map(r => r.userId)
+        ).size;
+        data.push({
+          label: `${format(periodStart, 'MMM dd')} - ${format(periodEnd, 'MMM dd')}`,
+          active
+        });
+      }
+      return data;
+    }
+
+    if (timeframe === ActivityTimeframe.MONTHLY) {
+      const data = [];
+      for (let i = 0; i < 6; i++) {
+        const d = startOfMonth(subMonths(to, 5 - i));
+        const active = new Set(
+          rows.filter(r => isSameMonth(r.date, d) && isSameYear(r.date, d))
+            .map(r => r.userId)
+        ).size;
+        data.push({ label: format(d, 'MMM yyyy'), active });
+      }
+      return data;
+    }
+
+    if (timeframe === ActivityTimeframe.QUARTERLY) {
+      const data = [];
+      for (let i = 0; i < 4; i++) {
+        const m = subMonths(to, (3 - i) * 3);
+        const qStart = startOfQuarter(m);
+        const qEnd = endOfDay(subDays(startOfQuarter(subMonths(qStart, -3)), 1));
+        const active = new Set(
+          rows.filter(r => {
+            const rDate = new Date(r.date);
+            return rDate >= qStart && rDate <= qEnd;
+          }).map(r => r.userId)
+        ).size;
+
+        const qNum = Math.floor(qStart.getMonth() / 3) + 1;
+        data.push({ label: `Q${qNum} ${format(qStart, 'yyyy')}`, active });
+      }
+      return data;
+    }
+
+    if (timeframe === ActivityTimeframe.YEARLY) {
+      const data = [];
+      for (let i = 0; i < 4; i++) {
+        const d = startOfYear(subYears(to, 3 - i));
+        const active = new Set(
+          rows.filter(r => isSameYear(r.date, d))
+            .map(r => r.userId)
+        ).size;
+        data.push({ label: format(d, 'yyyy'), active });
+      }
+      return data;
+    }
+
+    return [];
   }
 
   private async getLeaderboard() {

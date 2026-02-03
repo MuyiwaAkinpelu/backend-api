@@ -47,12 +47,10 @@ export class ActivityLogsService {
     // --- Event listener for async logging ---
     @OnEvent(ActivityLogEvent.ACTIVITY_LOG, { async: true })
     async handleActivityLog(payload: ActivityEvent) {
-        console.log('Received activity log event:', ActivityLogEvent.ACTIVITY_LOG, payload);
+        console.log('Received activity log event:');
         try {
-            console.log('create activity log', payload);
-
             let actorId = payload.userId;
-            let actorName = 'Someone';
+            let actorName = 'Unknown';
             let actorEmail = null;
 
             if (payload.userId) {
@@ -81,7 +79,7 @@ export class ActivityLogsService {
                 userAgent: payload.userAgent,
                 occurredAt: payload.occurredAt,
             });
-            console.log('Activity log created successfully');
+            // console.log('Activity log created successfully');
         } catch (error) {
             this.logger.error("Failed to write activity log", error);
         }
@@ -114,6 +112,15 @@ export class ActivityLogsService {
             ...result,
             data: result.data.map((log) => this.toBaseEntity(log)),
         };
+    }
+
+    async findAllLogs(): Promise<ActivityLogBaseEntity[]> {
+        const logs = await this.prisma.activityLog.findMany({
+            include: { user: true },
+            orderBy: { createdAt: "desc" },
+        });
+
+        return logs.map((log) => this.toBaseEntity(log));
     }
 
 
@@ -178,7 +185,7 @@ export class ActivityLogsService {
         const actor = log.actorName ||
             [log.user?.firstName, log.user?.lastName].filter(Boolean).join(' ') ||
             log.user?.email ||
-            "Someone";
+            "Unknown";
 
         switch (log.entity) {
             case ActivityEntity.FILE:

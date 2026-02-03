@@ -1,4 +1,4 @@
-import { User } from '@prisma/client';
+import { Notification, NotificationPreference, User } from '@prisma/client';
 import { Roles } from '@modules/app/app.roles';
 
 export default class UserEntity implements User {
@@ -34,4 +34,8 @@ export default class UserEntity implements User {
 
   readonly projectMemberProjectIDs: string[];
   readonly projectManagerProjectIDs: string[];
+  readonly isOnline!: boolean;
+  readonly lastSeen!: Date;
+  readonly notificationPreference?: NotificationPreference;
+  readonly notifications?: Notification[];
 }

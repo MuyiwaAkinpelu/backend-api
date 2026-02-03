@@ -40,6 +40,7 @@ import { PasswordResetService } from '../password-reset.service';
 import { RequestResetPasswordDto } from '../dto/request-reset-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ResendInviteDto } from '../dto/resend-invite.dto';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Auth')
@@ -202,6 +203,26 @@ export class AuthController {
     );
     return {
       message: 'Password reset successfully',
+    };
+  }
+
+  @Post('password/change')
+  @ApiBearerAuth()
+  @UseGuards(AccessGuard)
+  @ApiOperation({ summary: 'Change user password' })
+  @ApiBadRequestResponse({ description: 'Invalid current password' })
+  async changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const { id: userId } = await userProxy.get();
+    await this.authService.changePassword(
+      userId,
+      changePasswordDto.currentPassword,
+      changePasswordDto.newPassword,
+    );
+    return {
+      message: 'Password changed successfully',
     };
   }
 }

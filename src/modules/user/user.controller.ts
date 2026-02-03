@@ -8,7 +8,13 @@ import {
   Put,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  Post,
+  BadRequestException,
+  Res,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
 import {
   ApiBearerAuth,
@@ -43,6 +49,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { UserPaginationDTO } from './dto/user-pagination.dto';
 import { ListUsersDTO } from './dto/users.dto';
 import { UpdateUserDTO } from './dto/update-user.dto';
+import { UploadService } from '@modules/files/upload.service';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -51,7 +58,10 @@ import { UpdateUserDTO } from './dto/update-user.dto';
 @Controller('users')
 @SkipThrottle()
 export class UserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(
+    private readonly userService: UserService,
+    private readonly uploadService: UploadService,
+  ) { }
 
   @Get('members')
   @ApiOperation({ summary: 'Get all members' })
@@ -110,6 +120,69 @@ export class UserController {
     console.log(subject);
     console.log(conditions.toMongo());
     return subject;
+  }
+
+  @Post('profile-picture')
+  @ApiOperation({ summary: 'Upload profile picture' })
+  @ApiOkBaseResponse({ dto: UserBaseEntity })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProfilePicture(
+    @CaslUser() userProxy?: UserProxy<User>,
+    @UploadedFile() file?: Express.Multer.File,
+  ): Promise<User> {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    const user = await userProxy.get();
+
+    if (user.avatar) {
+      await this.uploadService.deleteFile(user.avatar);
+    }
+    const uploadedFiles = await this.uploadService.upload(
+      [file],
+      ['profile-picture'],
+      user.id,
+      user.roles,
+    );
+    const avatarUrl = uploadedFiles[0].path;
+    return this.userService.updateUser(user.id, { avatar: avatarUrl }, user.id);
+  }
+
+  @Delete('profile-picture')
+  @ApiOperation({ summary: 'Remove profile picture' })
+  @ApiOkBaseResponse({ dto: UserBaseEntity })
+  async removeProfilePicture(
+    @CaslUser() userProxy?: UserProxy<User>,
+  ): Promise<User> {
+    const user = await userProxy.get();
+    if (user.avatar) {
+      await this.uploadService.deleteFile(user.avatar);
+    }
+    return this.userService.updateUser(user.id, { avatar: null }, user.id);
+  }
+
+  @Get('profile-picture')
+  @ApiOperation({ summary: 'Get profile picture' })
+  @ApiOkBaseResponse({ dto: UserBaseEntity })
+  async getProfilePicture(
+    @CaslUser() userProxy?: UserProxy<User>,
+    @Res() res?: any,
+  ) {
+    const user = await userProxy.get();
+    if (!user.avatar) {
+      throw new BadRequestException('User does not have a profile picture');
+    }
+
+    const fileKey = user.avatar.split('/').pop();
+    const fileStream = await this.uploadService.downloadFile(fileKey);
+
+    res.set({
+      'Content-Type': 'image/jpeg', // Assuming jpeg for now, but really we should store/retrieve content type
+      'Content-Disposition': `inline; filename="profile-picture"`,
+    });
+
+    fileStream.pipe(res);
   }
 
   /**

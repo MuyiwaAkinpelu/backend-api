@@ -9,12 +9,15 @@ import { ProjectFiltersDTO } from './dto/project-filters.dto';
 import { ListProjectsDTO } from './dto/projects.dto';
 import { CreateProjectDTO } from './dto/create-project.dto';
 import { UpdateProjectDTO } from './dto/update-project.dto';
+import { PrismaService } from '@providers/prisma';
+import { ApprovalStatus } from '@prisma/client';
 
 @Injectable()
 export class ProjectService {
   constructor(
     private readonly projectRepository: ProjectRepository,
     private readonly eventEmitter: EventEmitter2,
+    private readonly prisma: PrismaService,
   ) { }
 
   async findById(id: string): Promise<Omit<Project, 'documentsIDs' | 'managersIDs' | 'membersIDs'> & { documentCount: number }> {
@@ -51,7 +54,13 @@ export class ProjectService {
     }
 
     const { documentsIDs, managersIDs, membersIDs, ...projectWithoutDocIds } = project as any;
-    const documentCount = documentsIDs.length;
+    const documentCount = await this.prisma.approvalRequest.count({
+      where: {
+        projectId: id,
+        status: ApprovalStatus.APPROVED,
+      },
+    });
+
     return { ...projectWithoutDocIds, documentCount };
   }
 
@@ -93,12 +102,32 @@ export class ProjectService {
       [sortBy]: order,
     };
 
-    return this.projectRepository.findAll(
+    const result = await this.projectRepository.findAll(
       where,
       include,
       sortByColumn,
       paginationOptions,
     );
+
+    // Fetch approved document counts for each project
+    const projectIds = result.data.map((p) => p.id);
+    const counts = await this.prisma.approvalRequest.groupBy({
+      by: ['projectId'],
+      where: {
+        projectId: { in: projectIds },
+        status: ApprovalStatus.APPROVED,
+      },
+      _count: { id: true },
+    });
+
+    const countsMap = new Map(counts.map((c) => [c.projectId, c._count.id]));
+
+    result.data = result.data.map((p) => ({
+      ...p,
+      documentCount: countsMap.get(p.id) || 0,
+    } as any));
+
+    return result;
   }
 
   async create(data: CreateProjectDTO): Promise<Project> {
@@ -145,6 +174,12 @@ export class ProjectService {
     };
 
     const updatedProject = await this.projectRepository.updateProject(id, projectData);
+
+    this.eventEmitter.emit('project.updated', {
+      projectId: id,
+      members: Array.from(new Set([...(updatedProject.membersIDs || []), ...(updatedProject.managersIDs || [])])),
+      name: updatedProject.name,
+    });
 
     if (data.status === Status.INACTIVE) {
       this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
@@ -280,12 +315,32 @@ export class ProjectService {
       [sortBy]: order,
     };
 
-    return this.projectRepository.findAll(
+    const result = await this.projectRepository.findAll(
       where,
       include,
       sortByColumn,
       paginationOptions,
     );
+
+    // Fetch approved document counts for each project
+    const projectIds = result.data.map((p) => p.id);
+    const counts = await this.prisma.approvalRequest.groupBy({
+      by: ['projectId'],
+      where: {
+        projectId: { in: projectIds },
+        status: ApprovalStatus.APPROVED,
+      },
+      _count: { id: true },
+    });
+
+    const countsMap = new Map(counts.map((c) => [c.projectId, c._count.id]));
+
+    result.data = result.data.map((p) => ({
+      ...p,
+      documentCount: countsMap.get(p.id) || 0,
+    } as any));
+
+    return result;
   }
 
   async getDocuments(projectId: string): Promise<any[]> {

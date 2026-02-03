@@ -41,6 +41,8 @@ export class UserService {
         avatar: true,
         isVerified: true,
         isActive: true,
+        isOnline: true,
+        lastSeen: true,
         roles: true,
         projectMemberProjects: { select: { id: true, name: true, category: true } },
         projectManagerProjects: { select: { id: true, name: true, category: true } },
@@ -96,6 +98,8 @@ export class UserService {
       createdAt: true,
       lastLogin: true,
       department: true,
+      isOnline: true,
+      lastSeen: true,
     };
     return this.userRepository.findAll(where, select);
   }

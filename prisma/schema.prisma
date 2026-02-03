@@ -22,6 +22,8 @@ model User {
   lastLogin  DateTime?
   isVerified Boolean?  @default(false)
   isActive   Boolean?  @default(true)
+  isOnline   Boolean?  @default(false)
+  lastSeen   DateTime? @default(now())
 
   department  String?
   designation String?
@@ -45,7 +47,45 @@ model User {
 
   tokens       Token[]
   activityLogs ActivityLog[]
+
+  notificationPreference NotificationPreference?
+  notifications          Notification[]
 }
+
+model NotificationPreference {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  userId  String @unique @db.ObjectId
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  email Boolean @default(true)
+  push  Boolean @default(true)
+  updates   Boolean @default(true)
+  approvals Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  message   String
+  type      NotificationType
+  read      Boolean  @default(false)
+  
+  metadata  Json?    // Optional extra info like projectId, requestId
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
 
 model TokenWhiteList {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -65,6 +105,15 @@ enum Roles {
   NEW_STAFF
   GUEST
   MANAGEMENT_STAFF
+}
+
+enum NotificationType {
+  PROJECT_UPDATE
+  APPROVAL_STATUS
+  DOCUMENT_UPDATED
+  DOCUMENT_APPROVED
+  DOCUMENT_DECLINED
+  REQUEST_SUBMITTED
 }
 
 enum DocumentApprovalStatus {
@@ -327,7 +376,7 @@ enum SecurityEventType {
   DOCUMENT_DELETED
   PERMISSION_CHANGE
   USER_DEACTIVATED
-  
+  PASSWORD_CHANGE_FAILED
 }
 
 enum TokenUseCase {

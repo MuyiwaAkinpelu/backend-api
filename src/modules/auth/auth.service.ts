@@ -5,6 +5,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { SignUpDto } from './dto/sign-up.dto';
 import { UserRepository } from '@modules/user/user.repository';
 import {
@@ -317,6 +318,55 @@ export class AuthService {
       metadata: {
         targetUserEmail: user.email,
         action: 'RESENT_INVITE',
+      },
+      occurredAt: new Date(),
+    });
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    // Verify current password
+    const isPasswordValid = await this.authTokenService.isPasswordCorrect(
+      currentPassword,
+      user.password,
+    );
+
+    if (!isPasswordValid) {
+      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+        userId: userId,
+        verb: ActivityVerb.UPDATE,
+        entity: ActivityEntity.AUTH,
+        outcome: ActivityOutcome.FAILURE,
+        securityEvent: SecurityEventType.PASSWORD_CHANGE_FAILED,
+        metadata: {
+          outcome: ActivityOutcome.FAILURE,
+          reason: 'INVALID_CURRENT_PASSWORD',
+        },
+        occurredAt: new Date(),
+      });
+      throw new BadRequestException(INVALID_CREDENTIALS);
+    }
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await this.userRepository.updateUser(userId, {
+      password: hashedNewPassword,
+    });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: userId,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.AUTH,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: SecurityEventType.PASSWORD_RESET,
+      metadata: {
+        action: 'PASSWORD_CHANGED',
       },
       occurredAt: new Date(),
     });

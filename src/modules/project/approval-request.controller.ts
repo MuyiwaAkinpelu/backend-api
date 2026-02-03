@@ -20,6 +20,8 @@ import { ApprovalRequest, User } from '@prisma/client';
 import { ListRequestsDTO } from './dto/list-requests.dto';
 import { DeclineRequestDTO } from './dto/decline-request.dto';
 import { SubmitRequestDTO } from './dto/submit-request.dto';
+import { BulkApproveRequestsDTO } from './dto/bulk-approve-requests.dto';
+import { BulkDeclineRequestsDTO } from './dto/bulk-decline-requests.dto';
 import { CaslUser, UserProxy } from '@modules/casl';
 import { ParseMongoIdPipe } from '@pipes/parse-mongoid.pipe';
 import ApprovalRequestBaseEntity from './entities/approval-request-base.entity';
@@ -38,7 +40,7 @@ import {
 export class ApprovalRequestController {
   constructor(
     private readonly approvalRequestService: ApprovalRequestService,
-  ) {}
+  ) { }
 
   @Get('/manager')
   @ApiOperation({ summary: 'Get approval requests for a manager' })
@@ -55,6 +57,89 @@ export class ApprovalRequestController {
     return this.approvalRequestService.listApprovalRequestsForManager(
       tokenUser.id,
       requestsDTO,
+    );
+  }
+
+  @Patch('bulk/approve')
+  @ApiOperation({ summary: 'Approve multiple approval requests in bulk' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk approval completed',
+    schema: {
+      type: 'object',
+      properties: {
+        successful: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/ApprovalRequestBaseEntity' },
+        },
+        failed: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              requestId: { type: 'string' },
+              error: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async bulkApproveRequests(
+    @Body() bulkApproveDTO: BulkApproveRequestsDTO,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const tokenUser = await userProxy.get();
+    console.log('bulkApproveDTO', bulkApproveDTO);
+
+    return this.approvalRequestService.bulkApproveRequests(
+      bulkApproveDTO.requestIds,
+      tokenUser.id,
+    );
+  }
+
+  @Patch('bulk/decline')
+  @ApiOperation({ summary: 'Decline multiple approval requests in bulk' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk decline completed',
+    schema: {
+      type: 'object',
+      properties: {
+        successful: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/ApprovalRequestBaseEntity' },
+        },
+        failed: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              requestId: { type: 'string' },
+              error: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found',
+  })
+  async bulkDeclineRequests(
+    @Body() bulkDeclineDTO: BulkDeclineRequestsDTO,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const tokenUser = await userProxy.get();
+    return this.approvalRequestService.bulkDeclineRequests(
+      bulkDeclineDTO.requestIds,
+      tokenUser.id,
+      bulkDeclineDTO.disapprovalReason,
     );
   }
 
@@ -128,6 +213,29 @@ export class ApprovalRequestController {
     return this.approvalRequestService.approveRequest(requestId, tokenUser.id);
   }
 
+  @Patch(':requestId/approve')
+  @ApiOperation({ summary: 'Approve an approval request' })
+  @ApiResponse({
+    status: 200,
+    description: 'Approval request approved',
+    type: ApprovalRequestBaseEntity,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Approval request or user not found',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'User is not a manager of the project',
+  })
+  async approveRequestInBulk(
+    @Param('requestId', new ParseMongoIdPipe()) requestId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ): Promise<ApprovalRequest> {
+    const tokenUser = await userProxy.get();
+    return this.approvalRequestService.approveRequest(requestId, tokenUser.id);
+  }
+
   @Patch(':requestId/decline')
   @ApiOperation({ summary: 'Decline an approval request' })
   @ApiResponse({
@@ -183,4 +291,6 @@ export class ApprovalRequestController {
     const tokenUser = await userProxy.get();
     await this.approvalRequestService.cancelRequest(id, tokenUser.id);
   }
+
+
 }
