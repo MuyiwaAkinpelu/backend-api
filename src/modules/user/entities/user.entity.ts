@@ -1,5 +1,4 @@
-import { Notification, NotificationPreference, User } from '@prisma/client';
-import { Roles } from '@modules/app/app.roles';
+import { Notification, NotificationPreference, Roles, User } from '@prisma/client';
 
 export default class UserEntity implements User {
   lastLogin: Date;
@@ -9,6 +8,7 @@ export default class UserEntity implements User {
   readonly phone!: string | null;
 
   readonly email!: string;
+  readonly googleId!: string | null;
 
   readonly firstName!: string | null;
 

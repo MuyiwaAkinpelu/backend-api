@@ -5,7 +5,9 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
 import { SignUpDto } from './dto/sign-up.dto';
 import { UserRepository } from '@modules/user/user.repository';
 import {
@@ -14,7 +16,7 @@ import {
   MFA_PHONE_OR_TOKEN_REQUIRED,
   USER_CONFLICT,
 } from '@constants/errors.constants';
-import { ActivityEntity, ActivityOutcome, ActivityVerb, SecurityEventType, TokenUseCase, User } from '@prisma/client';
+import { ActivityEntity, ActivityOutcome, ActivityVerb, Roles, SecurityEventType, TokenUseCase, User } from '@prisma/client';
 import { SignInDto } from '@modules/auth/dto/sign-in.dto';
 import { AuthTokenService } from '@modules/auth/auth-token.service';
 import { RedisService } from './redis.service';
@@ -28,6 +30,8 @@ import { ActivityLogEvent } from '@modules/activity-logs/constants';
 export class AuthService {
   private readonly logger = new Logger('AuthService');
 
+  private client: OAuth2Client;
+
   constructor(
     private readonly userRepository: UserRepository,
     private readonly authTokenService: AuthTokenService,
@@ -36,7 +40,10 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly passwordResetService: PasswordResetService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+    private readonly configService: ConfigService,
+  ) {
+    this.client = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'));
+  }
 
   /**
    * DEPRECATED
@@ -232,6 +239,77 @@ export class AuthService {
     });
 
     return this.sign(testUser, deviceIp);
+  }
+
+  async googleLogin(
+    idToken: string,
+    deviceIp: string,
+    userAgent?: string,
+  ): Promise<Auth.AccessRefreshTokens> {
+    let payload;
+    try {
+      const ticket = await this.client.verifyIdToken({
+        idToken,
+        audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
+      });
+      payload = ticket.getPayload();
+    } catch (error) {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+
+    const { sub: googleId, email, given_name, family_name, picture } = payload;
+
+    // 1. Try to find user by googleId
+    let user = await this.userRepository.findOne({ where: { googleId } });
+
+    if (!user) {
+      // 2. Try to find user by email (linking)
+      user = await this.userRepository.findOne({ where: { email } });
+
+      if (user) {
+        // Link existing user to Google
+        user = await this.userRepository.updateUser(user.id, { googleId });
+      } else {
+        // 3. Create new user
+        user = await this.userRepository.create({
+          email,
+          googleId,
+          firstName: given_name,
+          lastName: family_name,
+          avatar: picture,
+          isVerified: true,
+          isActive: true, // Auto-activate Google users
+          roles: [Roles.GUEST], // Assign default role
+          password: await bcrypt.hash(Math.random().toString(36).slice(-8), 10), // Random password
+        } as any);
+      }
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException(ACCOUNT_NOT_ACTIVE);
+    }
+
+    // update lastLogin date
+    await this.userRepository.updateUser(user.id, {
+      lastLogin: new Date(),
+    });
+
+    this.eventEmitter.emitAsync(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: user.id,
+      verb: ActivityVerb.LOGIN,
+      entity: ActivityEntity.AUTH,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: null,
+      metadata: {
+        outcome: 'SUCCESS',
+        method: 'GOOGLE',
+      },
+      ip: deviceIp,
+      userAgent,
+      occurredAt: new Date(),
+    });
+
+    return this.sign(user, deviceIp);
   }
 
   async sign(user: User, deviceIp: string) {

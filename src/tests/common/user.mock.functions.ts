@@ -45,6 +45,7 @@ export function createUsers(length: number): UserWithRelations[] {
     const user: UserWithRelations = {
       id: faker.string.alphanumeric({ length: 12 }),
       ...getSignUpData(),
+      googleId: null,
       phone: null,
       avatar: null,
       roles: [Roles.GUEST],

@@ -16,6 +16,7 @@ export class SignUpDto {
   @ApiProperty({ type: String })
   @IsEmail()
   @IsNotEmpty()
+  // @Matches(/@solinagroup\.com$/, { message: 'email must be a solinagroup.com email' })
   readonly email!: string;
 
   @ApiPropertyOptional({ type: String })

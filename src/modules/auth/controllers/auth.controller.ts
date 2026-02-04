@@ -42,6 +42,7 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ResendInviteDto } from '../dto/resend-invite.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { SkipThrottle } from '@nestjs/throttler';
+import { GoogleLoginDto } from '../dto/google-login.dto';
 
 @ApiTags('Auth')
 @SkipThrottle()
@@ -84,6 +85,19 @@ export class AuthController {
     @Ip() deviceIp: string,
   ): Promise<Auth.AccessRefreshTokens> {
     return this.authService.signIn(signInDto, deviceIp, req.headers['user-agent']);
+  }
+
+  @Version('1')
+  @ApiBody({ type: GoogleLoginDto })
+  @SkipAuth()
+  @ApiOperation({ summary: 'Sign-in with Google' })
+  @Post('google')
+  async googleSignIn(
+    @Body() googleLoginDto: GoogleLoginDto,
+    @Request() req: any,
+    @Ip() deviceIp: string,
+  ): Promise<Auth.AccessRefreshTokens> {
+    return this.authService.googleLogin(googleLoginDto.idToken, deviceIp, req.headers['user-agent']);
   }
 
   @Version('1')
