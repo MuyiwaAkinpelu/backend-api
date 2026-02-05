@@ -24,7 +24,8 @@ import { MailService } from '@modules/mail/services/mail.service';
 import { TokenService } from './token.service';
 import { PasswordResetService } from './password-reset.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent } from '@modules/activity-logs/constants';
+import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
+
 
 @Injectable()
 export class AuthService {
@@ -344,9 +345,18 @@ export class AuthService {
     return this.authTokenService.refreshTokens(refreshToken);
   }
 
-  logout(userId: string, accessToken: string): Promise<void> {
-    return this.authTokenService.logout(userId, accessToken);
+  async logout(userId: string, accessToken: string): Promise<void> {
+    await this.authTokenService.logout(userId, accessToken);
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: userId,
+      verb: ActivityVerb.LOGOUT,
+      entity: ActivityEntity.AUTH,
+      outcome: ActivityOutcome.SUCCESS,
+      occurredAt: new Date(),
+    });
   }
+
 
   async saveDeviceIP(userId: string, ip: string) {
     // Save device IP in Redis with expiration (e.g., 24 hours)
@@ -395,8 +405,9 @@ export class AuthService {
       securityEvent: null,
       metadata: {
         targetUserEmail: user.email,
-        action: 'RESENT_INVITE',
+        action: ActivityAction.RESENT_INVITE,
       },
+
       occurredAt: new Date(),
     });
   }
@@ -444,8 +455,9 @@ export class AuthService {
       outcome: ActivityOutcome.SUCCESS,
       securityEvent: SecurityEventType.PASSWORD_RESET,
       metadata: {
-        action: 'PASSWORD_CHANGED',
+        action: ActivityAction.PASSWORD_CHANGED,
       },
+
       occurredAt: new Date(),
     });
   }

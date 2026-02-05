@@ -9,7 +9,6 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { ProjectFiltersDTO } from './project-filters.dto';
 import { ProjectSortableColumns } from '../types';
 
 export class ProjectsPaginationDTO {

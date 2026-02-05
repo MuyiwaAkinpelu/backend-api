@@ -89,9 +89,14 @@ export class ProjectController {
     description: 'Project created',
     type: ProjectBaseEntity,
   })
-  async create(@Body() data: CreateProjectDTO): Promise<Project> {
-    return this.projectService.create(data);
+  async create(
+    @Body() data: CreateProjectDTO,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ): Promise<Project> {
+    const user = userProxy ? await userProxy.get() : null;
+    return this.projectService.create(data, user?.id);
   }
+
 
   @Patch(':projectId')
   @ApiOperation({ summary: 'Update a project by ID' })
@@ -137,9 +142,12 @@ export class ProjectController {
   async addMember(
     @Param('projectId') projectId: string,
     @Param('userId') userId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
   ): Promise<Project> {
-    return this.projectService.addMember(projectId, userId);
+    const user = await userProxy.get();
+    return this.projectService.addMember(projectId, userId, user.id);
   }
+
 
   @Delete(':projectId/members/:userId')
   @ApiOperation({ summary: 'Remove member from project' })
@@ -152,9 +160,12 @@ export class ProjectController {
   async removeMember(
     @Param('projectId') projectId: string,
     @Param('userId') userId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
   ): Promise<Project> {
-    return this.projectService.removeMember(projectId, userId);
+    const user = await userProxy.get();
+    return this.projectService.removeMember(projectId, userId, user.id);
   }
+
 
   @Post(':projectId/managers/:userId')
   @ApiOperation({ summary: 'Add manager to project' })
@@ -167,9 +178,12 @@ export class ProjectController {
   async addManager(
     @Param('projectId') projectId: string,
     @Param('userId') userId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
   ): Promise<Project> {
-    return this.projectService.addManager(projectId, userId);
+    const user = await userProxy.get();
+    return this.projectService.addManager(projectId, userId, user.id);
   }
+
 
   @Delete(':projectId/managers/:userId')
   @ApiOperation({ summary: 'Remove manager from project' })
@@ -182,9 +196,12 @@ export class ProjectController {
   async removeManager(
     @Param('projectId') projectId: string,
     @Param('userId') userId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
   ): Promise<Project> {
-    return this.projectService.removeManager(projectId, userId);
+    const user = await userProxy.get();
+    return this.projectService.removeManager(projectId, userId, user.id);
   }
+
 
   @Get(':projectId/documents')
   @ApiOperation({ summary: 'Get all documents in a project' })

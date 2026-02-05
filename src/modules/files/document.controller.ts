@@ -27,9 +27,11 @@ import {
 } from '@nestjs/swagger';
 import { DocumentService } from './document.service';
 import { UploadService } from './upload.service';
+import { ActivityAction, ActivityLogEvent } from '@modules/activity-logs/constants';
 import { FilesInterceptor } from '@nestjs/platform-express';
+
 import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
-import { DocumentVisibility, File, User } from '@prisma/client';
+import { DocumentVisibility, File, User, ActivityVerb, ActivityEntity, ActivityOutcome } from '@prisma/client';
 import { CaslUser, UserProxy } from '@modules/casl';
 import { DocumentSearchDTO } from './dto/document-search.dto';
 import ApiBaseResponses from '@decorators/api-base-response.decorator';
@@ -44,7 +46,7 @@ import { RenameDocumentDto } from './dto/rename-document.dto';
 import { SkipAuth } from '@modules/auth/guard/skip-auth.guard';
 import { ParseMongoIdPipe } from '@pipes/parse-mongoid.pipe';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent } from '@modules/activity-logs/constants';
+
 
 @ApiTags('Documents')
 @ApiBearerAuth()
@@ -202,9 +204,11 @@ export class DocumentController {
   async renameDocument(
     @Param('documentId') documentId: string,
     @Body() renameDocumentDto: RenameDocumentDto,
+    @CaslUser() userProxy?: UserProxy<User>,
   ) {
+    const user = await userProxy.get();
     const { originalFilename } = renameDocumentDto;
-    return this.documentService.renameDocument(documentId, originalFilename);
+    return this.documentService.renameDocument(documentId, originalFilename, user.id);
   }
 
   @Patch(':documentId/public')
@@ -214,8 +218,12 @@ export class DocumentController {
     description: 'Document visibility changed successfully',
   })
   @ApiResponse({ status: 404, description: 'Document not found' })
-  async setDocumentVisibilityToPublic(@Param('documentId') documentId: string) {
-    return this.documentService.setDocumentVisibilityToPublic(documentId);
+  async setDocumentVisibilityToPublic(
+    @Param('documentId') documentId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const user = await userProxy.get();
+    return this.documentService.setDocumentVisibilityToPublic(documentId, user.id);
   }
 
   @Patch(':documentId/private')
@@ -227,9 +235,12 @@ export class DocumentController {
   @ApiResponse({ status: 404, description: 'Document not found' })
   async setDocumentVisibilityToPrivate(
     @Param('documentId') documentId: string,
+    @CaslUser() userProxy?: UserProxy<User>,
   ) {
-    return this.documentService.setDocumentVisibilityToPrivate(documentId);
+    const user = await userProxy.get();
+    return this.documentService.setDocumentVisibilityToPrivate(documentId, user.id);
   }
+
 
   @Delete(':documentId')
   @ApiOperation({ summary: 'Delete a document' })
@@ -247,16 +258,26 @@ export class DocumentController {
   @ApiOperation({ summary: 'Download a document by ID' })
   @ApiResponse({ status: 200, description: 'Document downloaded successfully' })
   @ApiResponse({ status: 404, description: 'Document not found' })
-  async downloadDocument(@Param('documentId') documentId: string, @Res() res) {
+  async downloadDocument(
+    @Param('documentId') documentId: string,
+    @Res() res,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+
     const document = await this.documentService.getDocumentById(documentId);
 
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
+    const user = await userProxy?.get();
     const fileStream = await this.uploadService.downloadFile(document.filename);
 
-    this.eventEmitter.emit(ActivityLogEvent.DOCUMENT_DOWNLOADED, documentId);
+    this.eventEmitter.emit(ActivityLogEvent.DOCUMENT_DOWNLOADED, {
+      documentId,
+      userId: user?.id,
+    });
+
 
     res.set({
       'Content-Type': document.contentType,
@@ -292,7 +313,12 @@ export class DocumentController {
   @ApiOperation({ summary: 'Download a document by ID' })
   @ApiResponse({ status: 200, description: 'Document previewed successfully' })
   @ApiResponse({ status: 404, description: 'Document not found' })
-  async previewDocument(@Param('documentId') documentId: string, @Res() res) {
+  async previewDocument(
+    @Param('documentId') documentId: string,
+    @Res() res,
+    @CaslUser() userProxy?: UserProxy<User>,
+  ) {
+    const user = await userProxy?.get();
     const document = await this.documentService.getDocumentById(documentId, true);
 
     if (!document) {
@@ -301,6 +327,20 @@ export class DocumentController {
 
     const fileStream = await this.uploadService.downloadFile(document.filename);
 
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: user?.id,
+      verb: ActivityVerb.VIEW,
+      entity: ActivityEntity.FILE,
+      entityId: documentId,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        filename: document.originalFilename,
+        action: ActivityAction.PREVIEW,
+      },
+
+      occurredAt: new Date(),
+    });
+
     res.set({
       'Content-Type': document.contentType,
       'Content-Disposition': `inline; filename="${document.originalFilename}"`,
@@ -308,3 +348,4 @@ export class DocumentController {
     fileStream.pipe(res);
   }
 }
+

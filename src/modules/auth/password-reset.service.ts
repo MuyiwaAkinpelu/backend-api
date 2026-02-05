@@ -3,7 +3,10 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { TokenService } from './token.service';
 import { PrismaService } from '@providers/prisma';
 import { MailService } from '@modules/mail/services/mail.service';
-import { TokenType, TokenUseCase } from '@prisma/client';
+import { ActivityEntity, ActivityOutcome, ActivityVerb, SecurityEventType, TokenType, TokenUseCase } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
+
 import { ConfigService } from '@nestjs/config';
 import { CLIENT_URL } from '@constants/env.constants';
 
@@ -16,9 +19,11 @@ export class PasswordResetService {
     private readonly mailService: MailService,
     private readonly tokenService: TokenService,
     private readonly configService: ConfigService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.clientURL = this.configService.getOrThrow(CLIENT_URL);
   }
+
 
   async requestPasswordReset(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
@@ -41,7 +46,22 @@ export class PasswordResetService {
       link,
       expiresAt: token.expiresAt,
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: user.id,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.AUTH,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: SecurityEventType.PASSWORD_RESET,
+      metadata: {
+        action: ActivityAction.PASSWORD_RESET_REQUESTED,
+        email: email,
+      },
+
+      occurredAt: new Date(),
+    });
   }
+
 
   async newAccountResetLink(id) {
     const token = await this.tokenService.create(
@@ -85,5 +105,19 @@ export class PasswordResetService {
     await this.mailService.sendPasswordResetSuccess(user.email, {
       name: `${user.firstName} ${user.lastName}`,
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: user.id,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.AUTH,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: SecurityEventType.PASSWORD_RESET,
+      metadata: {
+        action: ActivityAction.PASSWORD_RESET_COMPLETED,
+      },
+
+      occurredAt: new Date(),
+    });
   }
+
 }

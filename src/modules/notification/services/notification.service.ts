@@ -1,6 +1,8 @@
 import { Injectable, Logger, Inject, forwardRef, BadRequestException } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
-import { Prisma, NotificationType } from '@prisma/client';
+import { Prisma, NotificationType, ActivityVerb, ActivityEntity, ActivityOutcome } from '@prisma/client';
+import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
+
 import { PrismaService } from '@providers/prisma';
 import { NotificationRepository } from '../notification.repository';
 import { NotificationGateway } from '../notification.gateway';
@@ -77,15 +79,42 @@ export class NotificationService {
         await this.repository.markAllAsRead(userId);
         await this.updateUnreadCountForUser(userId);
         await this.getAllMemberNotifications(userId);
+
+        this.emitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+            userId: userId,
+            verb: ActivityVerb.UPDATE,
+            entity: ActivityEntity.USER,
+            outcome: ActivityOutcome.SUCCESS,
+            metadata: {
+                action: ActivityAction.MARK_ALL_NOTIFICATIONS_READ,
+            },
+            occurredAt: new Date(),
+        });
+
         return true;
     }
+
 
     async markOneNotificationAsRead(userId: string, notificationId: string): Promise<boolean> {
         await this.repository.markAsRead(notificationId, userId);
         await this.updateUnreadCountForUser(userId);
         await this.getAllMemberNotifications(userId);
+
+        this.emitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+            userId: userId,
+            verb: ActivityVerb.UPDATE,
+            entity: ActivityEntity.USER,
+            outcome: ActivityOutcome.SUCCESS,
+            metadata: {
+                action: ActivityAction.MARK_NOTIFICATION_READ,
+                notificationId,
+            },
+            occurredAt: new Date(),
+        });
+
         return true;
     }
+
 
     async getUnreadCount(userId: string): Promise<number> {
         const count = await this.prisma.notification.count({

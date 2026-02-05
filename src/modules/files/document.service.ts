@@ -13,7 +13,8 @@ import { UserRepository } from '@modules/user/user.repository';
 import { ProjectRepository } from '@modules/project/project.repository';
 import { ListDocumentsDTO } from './dto/list-documents.dto';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent } from '@modules/activity-logs/constants';
+import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
+
 
 @Injectable()
 export class DocumentService {
@@ -95,15 +96,31 @@ export class DocumentService {
   }
 
   @OnEvent(ActivityLogEvent.DOCUMENT_DOWNLOADED, { async: true })
-  async handleDocumentDownloaded(documentId: string) {
+  async handleDocumentDownloaded(payload: { documentId: string; userId?: string }) {
+    const { documentId, userId } = payload;
     try {
       console.log('Document downloaded:', documentId);
 
       await this.incrementDownload(documentId);
+
+      const document = await this.fileRepository.findById(documentId);
+
+      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+        userId: userId,
+        verb: ActivityVerb.DOWNLOAD,
+        entity: ActivityEntity.FILE,
+        entityId: documentId,
+        outcome: ActivityOutcome.SUCCESS,
+        metadata: {
+          filename: document?.originalFilename,
+        },
+        occurredAt: new Date(),
+      });
     } catch (error) {
-      this.logger.error("Failed to increment download count", error);
+      this.logger.error("Failed to increment download count or log activity", error);
     }
   }
+
 
   async getDocuments(
     paginationDTO: ListDocumentsDTO,
@@ -302,32 +319,79 @@ export class DocumentService {
     );
   }
 
-  async setDocumentVisibilityToPublic(id: string) {
+  async setDocumentVisibilityToPublic(id: string, performedBy: string) {
     const document = await this.getDocumentById(id);
     const updatedDocument = await this.prisma.file.update({
       where: { id },
       data: { visibility: DocumentVisibility.PUBLIC },
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.FILE,
+      entityId: id,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        filename: document.originalFilename,
+        action: ActivityAction.SET_VISIBILITY_PUBLIC,
+      },
+
+      occurredAt: new Date(),
+    });
+
     return updatedDocument;
   }
 
-  async setDocumentVisibilityToPrivate(id: string) {
+  async setDocumentVisibilityToPrivate(id: string, performedBy: string) {
     const document = await this.getDocumentById(id);
     const updatedDocument = await this.prisma.file.update({
       where: { id },
       data: { visibility: DocumentVisibility.PRIVATE },
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.FILE,
+      entityId: id,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        filename: document.originalFilename,
+        action: ActivityAction.SET_VISIBILITY_PRIVATE,
+      },
+
+      occurredAt: new Date(),
+    });
+
     return updatedDocument;
   }
 
-  async renameDocument(id: string, newName: string) {
+  async renameDocument(id: string, newName: string, performedBy: string) {
     const document = await this.getDocumentById(id);
     const renamedDocument = await this.prisma.file.update({
       where: { id },
       data: { originalFilename: newName },
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.FILE,
+      entityId: id,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        oldFilename: document.originalFilename,
+        newFilename: newName,
+        action: ActivityAction.RENAME,
+      },
+
+      occurredAt: new Date(),
+    });
+
     return renamedDocument;
   }
+
 
   async deleteDocument(id: string, performedBy: string) {
     const document = await this.getDocumentById(id);

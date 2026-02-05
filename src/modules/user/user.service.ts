@@ -2,7 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from '@modules/user/user.repository';
 import { Prisma, Roles, User, ActivityVerb, ActivityEntity, ActivityOutcome, SecurityEventType } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent } from '@modules/activity-logs/constants';
+import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
+
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { USER_NOT_FOUND } from '@constants/errors.constants';
 import { UserFiltersDTO } from './dto/user-filters.dto';
@@ -225,8 +226,9 @@ export class UserService {
       securityEvent: null,
       metadata: {
         targetUserEmail: user.email,
-        action: 'ACTIVATED',
+        action: ActivityAction.ACTIVATED,
       },
+
       occurredAt: new Date(),
     });
     return updatedUser;
@@ -249,8 +251,9 @@ export class UserService {
       securityEvent: SecurityEventType.USER_DEACTIVATED,
       metadata: {
         targetUserEmail: user.email,
-        action: 'DEACTIVATED',
+        action: ActivityAction.DEACTIVATED,
       },
+
       occurredAt: new Date(),
     });
     return updatedUser;
@@ -273,8 +276,9 @@ export class UserService {
       securityEvent: null,
       metadata: {
         targetUserEmail: user.email,
-        action: 'VERIFIED',
+        action: ActivityAction.VERIFIED,
       },
+
       occurredAt: new Date(),
     });
     return updatedUser;

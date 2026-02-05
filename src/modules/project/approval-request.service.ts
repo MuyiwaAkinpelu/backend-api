@@ -113,7 +113,7 @@ export class ApprovalRequestService {
       throw new ConflictException(DOCUMENT_ALREADY_SUBMITTED);
     }
 
-    return this.approvalRequestRepository.create({
+    const request = await this.approvalRequestRepository.create({
       document: {
         connect: {
           id: documentId,
@@ -130,7 +130,23 @@ export class ApprovalRequestService {
         },
       },
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: userId,
+      verb: ActivityVerb.CREATE,
+      entity: ActivityEntity.APPROVAL,
+      entityId: request.id,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        documentName: document.originalFilename,
+        projectId: projectId,
+      },
+      occurredAt: new Date(),
+    });
+
+    return request;
   }
+
 
   async approveRequest(
     requestId: string,

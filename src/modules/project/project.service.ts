@@ -2,7 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProjectRepository } from './project.repository';
 import { Project, Prisma, User, ActivityEntity, ActivityVerb, Status, ActivityOutcome, SecurityEventType } from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent } from '@modules/activity-logs/constants';
+import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
+
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { PROJECT_NOT_FOUND } from '@constants/errors.constants';
 import { ProjectFiltersDTO } from './dto/project-filters.dto';
@@ -130,7 +131,7 @@ export class ProjectService {
     return result;
   }
 
-  async create(data: CreateProjectDTO): Promise<Project> {
+  async create(data: CreateProjectDTO, performedBy?: string): Promise<Project> {
     const { projectManagersIDs, projectMembersIDs, ...rest } = data;
 
     const projectData: Prisma.ProjectCreateInput = {
@@ -149,8 +150,23 @@ export class ProjectService {
       },
     };
 
-    return this.projectRepository.create(projectData);
+    const project = await this.projectRepository.create(projectData);
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.CREATE,
+      entity: ActivityEntity.PROJECT,
+      entityId: project.id,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        projectName: project.name,
+      },
+      occurredAt: new Date(),
+    });
+
+    return project;
   }
+
 
   async update(id: string, data: UpdateProjectDTO, performedBy: string): Promise<Project> {
     const { projectManagersIDs, projectMembersIDs, ...rest } = data;
@@ -181,21 +197,22 @@ export class ProjectService {
       name: updatedProject.name,
     });
 
-    if (data.status === Status.INACTIVE) {
-      this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
-        userId: performedBy,
-        verb: ActivityVerb.UPDATE,
-        entity: ActivityEntity.PROJECT,
-        entityId: id,
-        outcome: ActivityOutcome.SUCCESS,
-        securityEvent: null,
-        metadata: {
-          projectName: updatedProject.name,
-          action: 'DEACTIVATED',
-        },
-        occurredAt: new Date(),
-      });
-    }
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.PROJECT,
+      entityId: id,
+      outcome: ActivityOutcome.SUCCESS,
+      securityEvent: null,
+      metadata: {
+        projectName: updatedProject.name,
+        updates: data,
+        action: data.status === Status.INACTIVE ? ActivityAction.DEACTIVATED : ActivityAction.UPDATED,
+      },
+
+      occurredAt: new Date(),
+    });
+
 
     return updatedProject;
   }
@@ -225,41 +242,110 @@ export class ProjectService {
     return deletedProject;
   }
 
-  async addMember(projectId: string, userId: string): Promise<Project> {
+  async addMember(projectId: string, userId: string, performedBy: string): Promise<Project> {
     const project = await this.findById(projectId);
-    return this.projectRepository.updateProject(projectId, {
+    const updatedProject = await this.projectRepository.updateProject(projectId, {
       members: {
         connect: { id: userId },
       },
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.PROJECT,
+      entityId: projectId,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        projectName: project.name,
+        action: ActivityAction.ADD_MEMBER,
+        targetUserId: userId,
+      },
+
+      occurredAt: new Date(),
+    });
+
+    return updatedProject;
   }
 
-  async removeMember(projectId: string, userId: string): Promise<Project> {
+  async removeMember(projectId: string, userId: string, performedBy: string): Promise<Project> {
     const project = await this.findById(projectId);
-    return this.projectRepository.updateProject(projectId, {
+    const updatedProject = await this.projectRepository.updateProject(projectId, {
       members: {
         disconnect: { id: userId },
       },
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.PROJECT,
+      entityId: projectId,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        projectName: project.name,
+        action: ActivityAction.REMOVE_MEMBER,
+        targetUserId: userId,
+      },
+
+      occurredAt: new Date(),
+    });
+
+    return updatedProject;
   }
 
-  async addManager(projectId: string, userId: string): Promise<Project> {
+  async addManager(projectId: string, userId: string, performedBy: string): Promise<Project> {
     const project = await this.findById(projectId);
-    return this.projectRepository.updateProject(projectId, {
+    const updatedProject = await this.projectRepository.updateProject(projectId, {
       managers: {
         connect: { id: userId },
       },
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.PROJECT,
+      entityId: projectId,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        projectName: project.name,
+        action: ActivityAction.ADD_MANAGER,
+        targetUserId: userId,
+      },
+
+      occurredAt: new Date(),
+    });
+
+    return updatedProject;
   }
 
-  async removeManager(projectId: string, userId: string): Promise<Project> {
+  async removeManager(projectId: string, userId: string, performedBy: string): Promise<Project> {
     const project = await this.findById(projectId);
-    return this.projectRepository.updateProject(projectId, {
+    const updatedProject = await this.projectRepository.updateProject(projectId, {
       managers: {
         disconnect: { id: userId },
       },
     });
+
+    this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: performedBy,
+      verb: ActivityVerb.UPDATE,
+      entity: ActivityEntity.PROJECT,
+      entityId: projectId,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        projectName: project.name,
+        action: ActivityAction.REMOVE_MANAGER,
+        targetUserId: userId,
+      },
+
+      occurredAt: new Date(),
+    });
+
+    return updatedProject;
   }
+
 
   async getMyProjects(
     user: User,

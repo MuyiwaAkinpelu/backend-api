@@ -7,7 +7,8 @@ import { OnEvent } from "@nestjs/event-emitter";
 import { ActivityEvent } from "./events/activity-logs.event";
 import ActivityLogBaseEntity from "./entities/activity-log.base-entity"; // <- BaseEntity import
 import { plainToInstance } from "class-transformer";
-import { ActivityLogEvent } from "./constants";
+import { ActivityLogEvent, ActivityAction } from "./constants";
+
 import { ActivityLogsFiltersDTO } from "./dtos/activity-logs-filter.dto";
 import { ActivityLogsDTO } from "./dtos/activity-logs.dto";
 import { PaginatorTypes } from "@nodeteam/nestjs-prisma-pagination";
@@ -210,7 +211,13 @@ export class ActivityLogsService {
             case ActivityVerb.CREATE: return `${actor} uploaded ${filename}`;
             case ActivityVerb.VIEW: return `${actor} viewed ${filename}`;
             case ActivityVerb.DOWNLOAD: return `${actor} downloaded ${filename}`;
-            case ActivityVerb.UPDATE: return `${actor} updated ${filename}`;
+            case ActivityVerb.UPDATE: {
+                if (meta.action === ActivityAction.SET_VISIBILITY_PUBLIC) return `${actor} made ${filename} public`;
+                if (meta.action === ActivityAction.SET_VISIBILITY_PRIVATE) return `${actor} made ${filename} private`;
+                if (meta.oldFilename && meta.newFilename) return `${actor} renamed ${meta.oldFilename} to ${meta.newFilename}`;
+                return `${actor} updated ${filename}`;
+            }
+
             case ActivityVerb.DELETE: {
                 const status = meta.approvalStatus ? ` (${meta.approvalStatus})` : '';
                 return `${actor} deleted a file - ${filename}${status}`;
@@ -220,19 +227,26 @@ export class ActivityLogsService {
         }
     }
 
+
     private formatProjectActivity(log: ActivityLog, actor: string): string {
         const meta = this.asObject(log.metadata) as ProjectActivityMetadata;
         const projectName = meta.projectName ?? "a project";
         switch (log.verb) {
             case ActivityVerb.CREATE: return `${actor} created project "${projectName}"`;
             case ActivityVerb.UPDATE: {
-                if (meta.action === 'DEACTIVATED') return `${actor} deactivated project "${projectName}"`;
+                if (meta.action === ActivityAction.DEACTIVATED) return `${actor} deactivated project "${projectName}"`;
+                if (meta.action === ActivityAction.ADD_MEMBER) return `${actor} added a member to project "${projectName}"`;
+                if (meta.action === ActivityAction.REMOVE_MEMBER) return `${actor} removed a member from project "${projectName}"`;
+                if (meta.action === ActivityAction.ADD_MANAGER) return `${actor} added a manager to project "${projectName}"`;
+                if (meta.action === ActivityAction.REMOVE_MANAGER) return `${actor} removed a manager from project "${projectName}"`;
                 return `${actor} updated project "${projectName}"`;
             }
+
             case ActivityVerb.DELETE: return `${actor} deleted project "${projectName}"`;
             default: return `${actor} interacted with project "${projectName}"`;
         }
     }
+
 
     private formatApprovalActivity(log: ActivityLog, actor: string): string {
         const meta = this.asObject(log.metadata) as ApprovalActivityMetadata;
@@ -246,17 +260,27 @@ export class ActivityLogsService {
     }
 
     private formatAuthActivity(log: ActivityLog, actor: string): string {
+        const meta = this.asObject(log.metadata);
         switch (log.verb) {
             case ActivityVerb.LOGIN:
                 if (log.outcome === ActivityOutcome.FAILURE) {
-                    const meta = this.asObject(log.metadata);
                     return `Unknown user ${(meta.targetUserEmail) ?? ('N/A')} failed to log in`;
                 }
                 return `${actor} logged in`;
             case ActivityVerb.LOGOUT: return `${actor} logged out`;
+            case ActivityVerb.UPDATE: {
+                if (meta.action === ActivityAction.PASSWORD_RESET_REQUESTED) return `${actor} requested a password reset`;
+                if (meta.action === ActivityAction.PASSWORD_RESET_COMPLETED) return `${actor} completed a password reset`;
+                if (meta.action === ActivityAction.RESENT_INVITE) return `${actor} resent an account invitation to ${meta.email ?? meta.targetUserEmail ?? 'a user'}`;
+                if (meta.action === ActivityAction.PASSWORD_CHANGED) return `${actor} changed their password`;
+                return `${actor} updated security settings`;
+            }
+
+
             default: return `${actor} performed an authentication action`;
         }
     }
+
 
     private formatUserActivity(log: ActivityLog, actor: string): string {
         const meta = this.asObject(log.metadata) as UserActivityMetadata;
@@ -264,11 +288,20 @@ export class ActivityLogsService {
 
         switch (log.verb) {
             case ActivityVerb.CREATE: return `${actor} created user - ${targetUser}`;
-            case ActivityVerb.UPDATE: return `${actor} ${meta.action?.toLowerCase() ?? 'updated'} user - ${targetUser}`;
+            case ActivityVerb.UPDATE: {
+                if (meta.action === ActivityAction.MARK_ALL_NOTIFICATIONS_READ) return `${actor} marked all notifications as read`;
+                if (meta.action === ActivityAction.MARK_NOTIFICATION_READ) return `${actor} marked a notification as read`;
+                if (meta.action === ActivityAction.ACTIVATED) return `${actor} activated user - ${targetUser}`;
+                if (meta.action === ActivityAction.VERIFIED) return `${actor} verified user - ${targetUser}`;
+                return `${actor} ${meta.action?.toLowerCase() ?? 'updated'} user - ${targetUser}`;
+            }
+
+
             case ActivityVerb.DELETE: return `${actor} deleted user - ${targetUser}`;
             default: return `${actor} managed user - ${targetUser}`;
         }
     }
+
 
     // --- Helper to safely cast JSON metadata ---
     private asObject(metadata: Prisma.JsonValue | null | undefined): Record<string, any> {
