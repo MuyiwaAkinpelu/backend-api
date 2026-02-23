@@ -8,4 +8,4 @@ import { permissions } from './health.permissions';
   imports: [TerminusModule, CaslModule.forFeature({ permissions })],
   controllers: [HealthController],
 })
-export default class HealthModule { }
+export default class HealthModule {}

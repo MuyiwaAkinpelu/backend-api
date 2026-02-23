@@ -7,9 +7,26 @@ import { SecurityEventRepository } from '../repositories/security-event.reposito
 import { ActivityLogsService } from '@modules/activity-logs/activity-logs.service';
 import { ActivityLogSortableColumns } from '@modules/activity-logs/types';
 import { Order } from '@constants/order.constants';
-import { ActivityTimeframe, TrendPeriod, LogStatus } from '../constants/analytics.enums';
+import {
+  ActivityTimeframe,
+  TrendPeriod,
+  LogStatus,
+} from '../constants/analytics.enums';
 import { ApprovalStatus, ProjectCategory, Roles } from '@prisma/client';
-import { format, subDays, subMonths, subYears, startOfDay, endOfDay, isSameDay, isSameMonth, isSameYear, startOfMonth, startOfQuarter, startOfYear } from 'date-fns';
+import {
+  format,
+  subDays,
+  subMonths,
+  subYears,
+  startOfDay,
+  endOfDay,
+  isSameDay,
+  isSameMonth,
+  isSameYear,
+  startOfMonth,
+  startOfQuarter,
+  startOfYear,
+} from 'date-fns';
 import { ActivityLogsDTO } from '@modules/activity-logs/dtos/activity-logs.dto';
 
 @Injectable()
@@ -21,7 +38,7 @@ export class AnalyticsService {
     private readonly securityRepo: SecurityEventRepository,
     private readonly activityLogsService: ActivityLogsService,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   async getAdminAnalytics() {
     const [
@@ -30,70 +47,90 @@ export class AnalyticsService {
       pendingApprovals,
       totalViews,
       totalDownloads,
-      activeProjects
+      activeProjects,
     ] = await Promise.all([
       this.prisma.file.count({ where: { approvalRequests: { some: {} } } }),
       this.prisma.user.count(),
-      this.prisma.approvalRequest.count({ where: { status: ApprovalStatus.PENDING } }),
-      this.prisma.file.aggregate({ _sum: { views: true } }).then(res => res._sum?.views || 0),
-      this.prisma.file.aggregate({ _sum: { downloads: true } }).then(res => res._sum?.downloads || 0),
-      this.prisma.project.count({ where: { status: 'ACTIVE' } })
+      this.prisma.approvalRequest.count({
+        where: { status: ApprovalStatus.PENDING },
+      }),
+      this.prisma.file
+        .aggregate({ _sum: { views: true } })
+        .then((res) => res._sum?.views || 0),
+      this.prisma.file
+        .aggregate({ _sum: { downloads: true } })
+        .then((res) => res._sum?.downloads || 0),
+      this.prisma.project.count({ where: { status: 'ACTIVE' } }),
     ]);
 
     const uploadTrends = await this.getUploadTrends(TrendPeriod.ONE_YEAR);
 
     // Optimization: Fetch all projects and their document counts from ApprovalRequest (non-drafts) in fewer queries
     const allProjects = await this.prisma.project.findMany({
-      select: { id: true, name: true, category: true }
+      select: { id: true, name: true, category: true },
     });
 
     const allProjectsDocsStats = await this.prisma.approvalRequest.groupBy({
       by: ['projectId'],
-      _count: { documentId: true }
+      _count: { documentId: true },
     });
 
-    const projectCountMap = new Map(allProjectsDocsStats.map(s => [s.projectId, s._count.documentId]));
+    const projectCountMap = new Map(
+      allProjectsDocsStats.map((s) => [s.projectId, s._count.documentId]),
+    );
 
     const orgDistribution = [
       {
         name: 'SCIDaR',
         value: allProjects
-          .filter(p => p.category === ProjectCategory.SCIDAR)
-          .reduce((sum, p) => sum + (projectCountMap.get(p.id) || 0), 0)
+          .filter((p) => p.category === ProjectCategory.SCIDAR)
+          .reduce((sum, p) => sum + (projectCountMap.get(p.id) || 0), 0),
       },
       {
         name: ProjectCategory.SOLINA_HEALTH,
         value: allProjects
-          .filter(p => p.category === ProjectCategory.SOLINA_HEALTH)
-          .reduce((sum, p) => sum + (projectCountMap.get(p.id) || 0), 0)
+          .filter((p) => p.category === ProjectCategory.SOLINA_HEALTH)
+          .reduce((sum, p) => sum + (projectCountMap.get(p.id) || 0), 0),
       },
     ];
 
-    const projectDistribution = allProjects
-      .slice(0, 6)
-      .map(p => ({
-        name: p.name,
-        value: projectCountMap.get(p.id) || 0
-      }));
+    const projectDistribution = allProjects.slice(0, 6).map((p) => ({
+      name: p.name,
+      value: projectCountMap.get(p.id) || 0,
+    }));
 
-    const mostViewedDocuments = await this.prisma.file.findMany({
-      take: 5,
-      orderBy: { views: 'desc' },
-      select: { originalFilename: true, views: true }
-    }).then(docs => docs.map(d => ({ title: d.originalFilename, views: d.views })));
+    const mostViewedDocuments = await this.prisma.file
+      .findMany({
+        take: 5,
+        orderBy: { views: 'desc' },
+        select: { originalFilename: true, views: true },
+      })
+      .then((docs) =>
+        docs.map((d) => ({ title: d.originalFilename, views: d.views })),
+      );
 
-    const userActivity = await this.getUserActivityByTimeframe(ActivityTimeframe.WEEKLY);
+    const userActivity = await this.getUserActivityByTimeframe(
+      ActivityTimeframe.WEEKLY,
+    );
 
-    const failedLoginsRaw = await this.securityRepo.findFailedLogins(new Date(new Date().setDate(new Date().getDate() - 30)), new Date());
+    const failedLoginsRaw = await this.securityRepo.findFailedLogins(
+      new Date(new Date().setDate(new Date().getDate() - 30)),
+      new Date(),
+    );
     const recentLogsRaw = await this.prisma.activityLog.findMany({
       take: 10,
       orderBy: { createdAt: 'desc' },
-      include: { user: { select: { firstName: true, lastName: true } } }
+      include: { user: { select: { firstName: true, lastName: true } } },
     });
 
     const securityAudit = {
-      failedLogins: failedLoginsRaw.map(f => ({ date: f.occurredAt.toISOString().split('T')[0], count: f.count })),
-      unauthorizedAttempts: await this.prisma.activityLog.count({ where: { securityEvent: 'UNAUTHORIZED_ACCESS' } }),
+      failedLogins: failedLoginsRaw.map((f) => ({
+        date: f.occurredAt.toISOString().split('T')[0],
+        count: f.count,
+      })),
+      unauthorizedAttempts: await this.prisma.activityLog.count({
+        where: { securityEvent: 'UNAUTHORIZED_ACCESS' },
+      }),
       // recentLogs: recentLogsRaw.map(log => ({
       //   action: log.verb,
       //   user: log.user ? `${log.user.firstName} ${log.user.lastName}` : 'System',
@@ -101,16 +138,21 @@ export class AnalyticsService {
       //   time: log.createdAt.toISOString(),
       //   status: log.outcome === 'SUCCESS' ? LogStatus.SUCCESS : LogStatus.FLAGGED
       // }))
-      recentLogs: await this.getAuditLogs()
+      recentLogs: await this.getAuditLogs(),
     };
 
     const approvalStats = await this.prisma.approvalRequest.groupBy({
       by: ['status'],
-      _count: { id: true }
+      _count: { id: true },
     });
-    const approvalDistribution = approvalStats.map(s => ({
-      name: s.status === 'APPROVED' ? 'Approved' : s.status === 'DECLINED' ? 'Declined' : 'Pending',
-      value: s._count.id
+    const approvalDistribution = approvalStats.map((s) => ({
+      name:
+        s.status === 'APPROVED'
+          ? 'Approved'
+          : s.status === 'DECLINED'
+          ? 'Declined'
+          : 'Pending',
+      value: s._count.id,
     }));
 
     return {
@@ -129,21 +171,28 @@ export class AnalyticsService {
       operationalEfficiency: {
         avgApprovalTime: await this.calculateAvgApprovalTime(),
         approvalDistribution,
-        metadataQuality: await this.calculateMetadataQuality()
+        metadataQuality: await this.calculateMetadataQuality(),
       },
       engagementInsights: {
-        inactiveUsers: await this.prisma.user.count({ where: { isActive: false } }),
-        leaderboard: await this.getLeaderboard()
-      }
+        inactiveUsers: await this.prisma.user.count({
+          where: { isActive: false },
+        }),
+        leaderboard: await this.getLeaderboard(),
+      },
     };
   }
 
-  async getUploadTrends(period: TrendPeriod | string, customFrom?: Date, customTo?: Date) {
+  async getUploadTrends(
+    period: TrendPeriod | string,
+    customFrom?: Date,
+    customTo?: Date,
+  ) {
     let from = new Date();
     const to = customTo || new Date();
 
     if (period === TrendPeriod.SIX_MONTHS) from.setMonth(from.getMonth() - 6);
-    else if (period === TrendPeriod.ONE_YEAR) from.setFullYear(from.getFullYear() - 1);
+    else if (period === TrendPeriod.ONE_YEAR)
+      from.setFullYear(from.getFullYear() - 1);
     else if (period === TrendPeriod.ALL_TIME) from = new Date(0);
     else if (period === TrendPeriod.CUSTOM && customFrom) from = customFrom;
     else from.setFullYear(from.getFullYear() - 1);
@@ -151,16 +200,18 @@ export class AnalyticsService {
     const stats = await this.uploadsRepo.findRange(from, to);
 
     const monthlyData = new Map<string, number>();
-    stats.forEach(stat => {
+    stats.forEach((stat) => {
       const month = stat.date.toISOString().slice(0, 7);
       const current = monthlyData.get(month) || 0;
       monthlyData.set(month, current + stat.uploads);
     });
 
-    return Array.from(monthlyData.entries()).map(([month, uploads]) => ({ month, uploads })).sort((a, b) => a.month.localeCompare(b.month));
+    return Array.from(monthlyData.entries())
+      .map(([month, uploads]) => ({ month, uploads }))
+      .sort((a, b) => a.month.localeCompare(b.month));
   }
 
-  async getAuditLogs(limit: number = 20) {
+  async getAuditLogs(limit = 20) {
     const logDto = new ActivityLogsDTO();
     logDto.page = 1;
     logDto.limit = limit;
@@ -169,12 +220,12 @@ export class AnalyticsService {
 
     const result = await this.activityLogsService.findAll(logDto);
 
-    return result.data.map(log => ({
+    return result.data.map((log) => ({
       action: log.verb,
       user: log.actorName || 'System',
       description: log.description,
       time: log.createdAt.toISOString(),
-      status: log.outcome === 'SUCCESS' ? LogStatus.SUCCESS : LogStatus.FLAGGED
+      status: log.outcome === 'SUCCESS' ? LogStatus.SUCCESS : LogStatus.FLAGGED,
     }));
   }
 
@@ -183,12 +234,23 @@ export class AnalyticsService {
     let from = startOfDay(new Date());
 
     switch (timeframe) {
-      case ActivityTimeframe.WEEKLY: from = startOfDay(subDays(to, 6)); break;
-      case ActivityTimeframe.BIWEEKLY: from = startOfDay(subDays(to, 83)); break; // 12 weeks (6 periods of 14 days)
-      case ActivityTimeframe.MONTHLY: from = startOfMonth(subMonths(to, 5)); break;
-      case ActivityTimeframe.QUARTERLY: from = startOfQuarter(subMonths(to, 11)); break;
-      case ActivityTimeframe.YEARLY: from = startOfYear(subYears(to, 3)); break;
-      default: from = startOfDay(subDays(to, 6));
+      case ActivityTimeframe.WEEKLY:
+        from = startOfDay(subDays(to, 6));
+        break;
+      case ActivityTimeframe.BIWEEKLY:
+        from = startOfDay(subDays(to, 83));
+        break; // 12 weeks (6 periods of 14 days)
+      case ActivityTimeframe.MONTHLY:
+        from = startOfMonth(subMonths(to, 5));
+        break;
+      case ActivityTimeframe.QUARTERLY:
+        from = startOfQuarter(subMonths(to, 11));
+        break;
+      case ActivityTimeframe.YEARLY:
+        from = startOfYear(subYears(to, 3));
+        break;
+      default:
+        from = startOfDay(subDays(to, 6));
     }
 
     const rows = await this.activityRepo.findGrouped(from, to);
@@ -197,7 +259,7 @@ export class AnalyticsService {
       const data = [];
       for (let i = 0; i < 7; i++) {
         const d = subDays(to, 6 - i);
-        const active = rows.filter(r => isSameDay(r.date, d)).length;
+        const active = rows.filter((r) => isSameDay(r.date, d)).length;
         data.push({ label: format(d, 'MMM dd'), active });
       }
       return data;
@@ -206,15 +268,19 @@ export class AnalyticsService {
     if (timeframe === ActivityTimeframe.BIWEEKLY) {
       const data = [];
       for (let i = 0; i < 6; i++) {
-        const periodStart = startOfDay(subDays(to, 83 - (i * 14)));
+        const periodStart = startOfDay(subDays(to, 83 - i * 14));
         const periodEnd = endOfDay(subDays(periodStart, -13));
         const active = new Set(
-          rows.filter(r => r.date >= periodStart && r.date <= periodEnd)
-            .map(r => r.userId)
+          rows
+            .filter((r) => r.date >= periodStart && r.date <= periodEnd)
+            .map((r) => r.userId),
         ).size;
         data.push({
-          label: `${format(periodStart, 'MMM dd')} - ${format(periodEnd, 'MMM dd')}`,
-          active
+          label: `${format(periodStart, 'MMM dd')} - ${format(
+            periodEnd,
+            'MMM dd',
+          )}`,
+          active,
         });
       }
       return data;
@@ -225,8 +291,9 @@ export class AnalyticsService {
       for (let i = 0; i < 6; i++) {
         const d = startOfMonth(subMonths(to, 5 - i));
         const active = new Set(
-          rows.filter(r => isSameMonth(r.date, d) && isSameYear(r.date, d))
-            .map(r => r.userId)
+          rows
+            .filter((r) => isSameMonth(r.date, d) && isSameYear(r.date, d))
+            .map((r) => r.userId),
         ).size;
         data.push({ label: format(d, 'MMM yyyy'), active });
       }
@@ -238,12 +305,16 @@ export class AnalyticsService {
       for (let i = 0; i < 4; i++) {
         const m = subMonths(to, (3 - i) * 3);
         const qStart = startOfQuarter(m);
-        const qEnd = endOfDay(subDays(startOfQuarter(subMonths(qStart, -3)), 1));
+        const qEnd = endOfDay(
+          subDays(startOfQuarter(subMonths(qStart, -3)), 1),
+        );
         const active = new Set(
-          rows.filter(r => {
-            const rDate = new Date(r.date);
-            return rDate >= qStart && rDate <= qEnd;
-          }).map(r => r.userId)
+          rows
+            .filter((r) => {
+              const rDate = new Date(r.date);
+              return rDate >= qStart && rDate <= qEnd;
+            })
+            .map((r) => r.userId),
         ).size;
 
         const qNum = Math.floor(qStart.getMonth() / 3) + 1;
@@ -257,8 +328,7 @@ export class AnalyticsService {
       for (let i = 0; i < 4; i++) {
         const d = startOfYear(subYears(to, 3 - i));
         const active = new Set(
-          rows.filter(r => isSameYear(r.date, d))
-            .map(r => r.userId)
+          rows.filter((r) => isSameYear(r.date, d)).map((r) => r.userId),
         ).size;
         data.push({ label: format(d, 'yyyy'), active });
       }
@@ -273,18 +343,26 @@ export class AnalyticsService {
       by: ['uploaderId'],
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
-      take: 5
+      take: 5,
     });
-    return Promise.all(topUploaders.filter(u => u.uploaderId).map(async u => {
-      const user = await this.prisma.user.findUnique({ where: { id: u.uploaderId! } });
-      const isAdmin = user?.roles.includes(Roles.SYSTEM_ADMIN);
-      const project = await this.prisma.project.findFirst({ where: { membersIDs: { has: u.uploaderId! } } });
-      return {
-        name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
-        uploads: u._count.id,
-        project: isAdmin ? 'Administrator' : project?.name || 'N/A'
-      };
-    }));
+    return Promise.all(
+      topUploaders
+        .filter((u) => u.uploaderId)
+        .map(async (u) => {
+          const user = await this.prisma.user.findUnique({
+            where: { id: u.uploaderId! },
+          });
+          const isAdmin = user?.roles.includes(Roles.SYSTEM_ADMIN);
+          const project = await this.prisma.project.findFirst({
+            where: { membersIDs: { has: u.uploaderId! } },
+          });
+          return {
+            name: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+            uploads: u._count.id,
+            project: isAdmin ? 'Administrator' : project?.name || 'N/A',
+          };
+        }),
+    );
   }
 
   // Previous methods kept for compatibility if needed (overwritten above but interface must match)
@@ -293,21 +371,23 @@ export class AnalyticsService {
 
     // Group by date to count unique users (each row is a user-day activity)
     const dailyMap = new Map<string, number>();
-    rows.forEach(row => {
+    rows.forEach((row) => {
       const dateKey = row.date.toISOString().slice(0, 10); // YYYY-MM-DD
       dailyMap.set(dateKey, (dailyMap.get(dateKey) || 0) + 1);
     });
 
-    return Array.from(dailyMap.entries()).map(([date, active]) => ({
-      label: date,
-      active
-    })).sort((a, b) => a.label.localeCompare(b.label));
+    return Array.from(dailyMap.entries())
+      .map(([date, active]) => ({
+        label: date,
+        active,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }
 
   async getSecurityAudit(from: Date, to: Date) {
     const failed = await this.securityRepo.findFailedLogins(from, to);
     return {
-      failedLogins: failed.map(f => ({
+      failedLogins: failed.map((f) => ({
         date: f.occurredAt,
         count: f.count,
       })),
@@ -317,7 +397,7 @@ export class AnalyticsService {
   private async calculateAvgApprovalTime(): Promise<number> {
     const approvedRequests = await this.prisma.approvalRequest.findMany({
       where: { status: ApprovalStatus.APPROVED },
-      select: { createdAt: true, updatedAt: true }
+      select: { createdAt: true, updatedAt: true },
     });
 
     if (approvedRequests.length === 0) return 0;
@@ -340,22 +420,20 @@ export class AnalyticsService {
     const [withDesc, withTags, withType] = await Promise.all([
       this.prisma.file.count({
         where: {
-          AND: [
-            { description: { not: null } },
-            { description: { not: '' } }
-          ]
-        }
+          AND: [{ description: { not: null } }, { description: { not: '' } }],
+        },
       }),
       this.prisma.file.count({
-        where: { NOT: { tags: { equals: [] } } }
+        where: { NOT: { tags: { equals: [] } } },
       }),
       this.prisma.file.count({
-        where: { contentType: { not: '' } }
+        where: { contentType: { not: '' } },
       }),
     ]);
 
     // weighted formula: desc(40%) + tags(30%) + contentType(30%)
-    const score = ((withDesc * 0.4) + (withTags * 0.3) + (withType * 0.3)) / totalDocs * 100;
+    const score =
+      ((withDesc * 0.4 + withTags * 0.3 + withType * 0.3) / totalDocs) * 100;
 
     return Math.round(score);
   }

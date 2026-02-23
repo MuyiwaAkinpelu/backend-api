@@ -16,7 +16,15 @@ import {
   MFA_PHONE_OR_TOKEN_REQUIRED,
   USER_CONFLICT,
 } from '@constants/errors.constants';
-import { ActivityEntity, ActivityOutcome, ActivityVerb, Roles, SecurityEventType, TokenUseCase, User } from '@prisma/client';
+import {
+  ActivityEntity,
+  ActivityOutcome,
+  ActivityVerb,
+  Roles,
+  SecurityEventType,
+  TokenUseCase,
+  User,
+} from '@prisma/client';
 import { SignInDto } from '@modules/auth/dto/sign-in.dto';
 import { AuthTokenService } from '@modules/auth/auth-token.service';
 import { RedisService } from './redis.service';
@@ -24,8 +32,10 @@ import { MailService } from '@modules/mail/services/mail.service';
 import { TokenService } from './token.service';
 import { PasswordResetService } from './password-reset.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
-
+import {
+  ActivityLogEvent,
+  ActivityAction,
+} from '@modules/activity-logs/constants';
 
 @Injectable()
 export class AuthService {
@@ -43,7 +53,9 @@ export class AuthService {
     private readonly eventEmitter: EventEmitter2,
     private readonly configService: ConfigService,
   ) {
-    this.client = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'));
+    this.client = new OAuth2Client(
+      this.configService.get<string>('GOOGLE_CLIENT_ID'),
+    );
   }
 
   /**
@@ -72,7 +84,10 @@ export class AuthService {
    * @returns Promise<User> - Created user
    * @throws ConflictException - User with this email or phone already exists
    */
-  async createAccount(signUpDto: SignUpDto, performedBy?: string): Promise<User> {
+  async createAccount(
+    signUpDto: SignUpDto,
+    performedBy?: string,
+  ): Promise<User> {
     const testUser: User = await this.userRepository.findOne({
       where: { email: signUpDto.email },
     });
@@ -176,7 +191,6 @@ export class AuthService {
         testUser.password,
       ))
     ) {
-
       this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
         userId: undefined,
         verb: ActivityVerb.LOGIN,
@@ -357,7 +371,6 @@ export class AuthService {
     });
   }
 
-
   async saveDeviceIP(userId: string, ip: string) {
     // Save device IP in Redis with expiration (e.g., 24 hours)
     await this.redisService.set(`device:${userId}:${ip}`, 86400);
@@ -370,8 +383,10 @@ export class AuthService {
     return result === 0; // Returns 0 if key doesn't exist (new device)
   }
 
-
-  async resendAccountSetupInvite(userId: string, performedBy: string): Promise<void> {
+  async resendAccountSetupInvite(
+    userId: string,
+    performedBy: string,
+  ): Promise<void> {
     const user = await this.userRepository.findById(userId);
 
     if (!user) {
@@ -412,7 +427,11 @@ export class AuthService {
     });
   }
 
-  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
     const user = await this.userRepository.findById(userId);
 
     if (!user) {

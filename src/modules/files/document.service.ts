@@ -1,5 +1,15 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { DocumentVisibility, File, Prisma, ApprovalStatus, Roles, ActivityVerb, ActivityEntity, ActivityOutcome, SecurityEventType } from '@prisma/client';
+import {
+  DocumentVisibility,
+  File,
+  Prisma,
+  ApprovalStatus,
+  Roles,
+  ActivityVerb,
+  ActivityEntity,
+  ActivityOutcome,
+  SecurityEventType,
+} from '@prisma/client';
 import { PrismaService } from '@providers/prisma';
 import { DocumentSearchObject } from '@modules/search/objects/document.search.object';
 import { SearchService } from '@modules/search/search.service';
@@ -13,8 +23,10 @@ import { UserRepository } from '@modules/user/user.repository';
 import { ProjectRepository } from '@modules/project/project.repository';
 import { ListDocumentsDTO } from './dto/list-documents.dto';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
-
+import {
+  ActivityLogEvent,
+  ActivityAction,
+} from '@modules/activity-logs/constants';
 
 @Injectable()
 export class DocumentService {
@@ -96,7 +108,10 @@ export class DocumentService {
   }
 
   @OnEvent(ActivityLogEvent.DOCUMENT_DOWNLOADED, { async: true })
-  async handleDocumentDownloaded(payload: { documentId: string; userId?: string }) {
+  async handleDocumentDownloaded(payload: {
+    documentId: string;
+    userId?: string;
+  }) {
     const { documentId, userId } = payload;
     try {
       console.log('Document downloaded:', documentId);
@@ -117,10 +132,12 @@ export class DocumentService {
         occurredAt: new Date(),
       });
     } catch (error) {
-      this.logger.error("Failed to increment download count or log activity", error);
+      this.logger.error(
+        'Failed to increment download count or log activity',
+        error,
+      );
     }
   }
-
 
   async getDocuments(
     paginationDTO: ListDocumentsDTO,
@@ -392,7 +409,6 @@ export class DocumentService {
     return renamedDocument;
   }
 
-
   async deleteDocument(id: string, performedBy: string) {
     const document = await this.getDocumentById(id);
 
@@ -403,9 +419,12 @@ export class DocumentService {
 
     let approvalStatus = 'DRAFT';
     if (requests.length > 0) {
-      if (requests.some(r => r.status === ApprovalStatus.APPROVED)) approvalStatus = 'APPROVED';
-      else if (requests.some(r => r.status === ApprovalStatus.PENDING)) approvalStatus = 'PENDING';
-      else if (requests.some(r => r.status === ApprovalStatus.DECLINED)) approvalStatus = 'DECLINED';
+      if (requests.some((r) => r.status === ApprovalStatus.APPROVED))
+        approvalStatus = 'APPROVED';
+      else if (requests.some((r) => r.status === ApprovalStatus.PENDING))
+        approvalStatus = 'PENDING';
+      else if (requests.some((r) => r.status === ApprovalStatus.DECLINED))
+        approvalStatus = 'DECLINED';
     }
 
     try {
@@ -449,7 +468,7 @@ export class DocumentService {
           filename: document.originalFilename,
           approvalStatus: approvalStatus,
           projectsIDs: document.projectsIDs,
-          error: error.message
+          error: error.message,
         },
         occurredAt: new Date(),
       });
@@ -489,8 +508,26 @@ export class DocumentService {
         };
       }
 
-      if (filters.projectIDs) {
-        where.projectsIDs = { hasSome: filters.projectIDs };
+      let targetProjectIDs = filters.projectIDs;
+
+      if (filters.projectCategory !== undefined) {
+        const projects = await this.prisma.project.findMany({
+          where: { category: filters.projectCategory },
+          select: { id: true },
+        });
+        const projectIdsFromCategory = projects.map((p) => p.id);
+
+        if (targetProjectIDs) {
+          targetProjectIDs = targetProjectIDs.filter((id) =>
+            projectIdsFromCategory.includes(id),
+          );
+        } else {
+          targetProjectIDs = projectIdsFromCategory;
+        }
+      }
+
+      if (targetProjectIDs) {
+        where.projectsIDs = { hasSome: targetProjectIDs };
       }
       if (filters.sizeMin !== undefined || filters.sizeMax !== undefined) {
         where.size = {};

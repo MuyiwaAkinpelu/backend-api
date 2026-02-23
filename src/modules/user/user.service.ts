@@ -1,8 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from '@modules/user/user.repository';
-import { Prisma, Roles, User, ActivityVerb, ActivityEntity, ActivityOutcome, SecurityEventType } from '@prisma/client';
+import {
+  Prisma,
+  Roles,
+  User,
+  ActivityVerb,
+  ActivityEntity,
+  ActivityOutcome,
+  SecurityEventType,
+} from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
+import {
+  ActivityLogEvent,
+  ActivityAction,
+} from '@modules/activity-logs/constants';
 
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { USER_NOT_FOUND } from '@constants/errors.constants';
@@ -14,7 +25,7 @@ export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   async findById(id: string): Promise<User> {
     const user = await this.userRepository.findById(id);
@@ -45,8 +56,12 @@ export class UserService {
         isOnline: true,
         lastSeen: true,
         roles: true,
-        projectMemberProjects: { select: { id: true, name: true, category: true } },
-        projectManagerProjects: { select: { id: true, name: true, category: true } },
+        projectMemberProjects: {
+          select: { id: true, name: true, category: true },
+        },
+        projectManagerProjects: {
+          select: { id: true, name: true, category: true },
+        },
       },
     });
   }
@@ -63,8 +78,12 @@ export class UserService {
 
     const where: Prisma.UserWhereInput = this.buildWhereClause(filters);
     const include: Prisma.UserInclude = {
-      projectMemberProjects: { select: { id: true, name: true, category: true } },
-      projectManagerProjects: { select: { id: true, name: true, category: true } },
+      projectMemberProjects: {
+        select: { id: true, name: true, category: true },
+      },
+      projectManagerProjects: {
+        select: { id: true, name: true, category: true },
+      },
     };
 
     const paginationOptions: PaginatorTypes.PaginateOptions = {
@@ -112,7 +131,11 @@ export class UserService {
    * @param performedBy The ID of the user performing the update.
    * @returns The updated user.
    */
-  async updateUser(id: string, data: Prisma.UserUpdateInput, performedBy: string): Promise<User> {
+  async updateUser(
+    id: string,
+    data: Prisma.UserUpdateInput,
+    performedBy: string,
+  ): Promise<User> {
     const user = await this.findById(id);
     const updatedUser = await this.userRepository.updateUser(id, data);
 
@@ -164,7 +187,11 @@ export class UserService {
    * @param performedBy The ID of the user performing the update.
    * @returns The updated user.
    */
-  async updateUserRoles(userId: string, roles: Roles[], performedBy: string): Promise<User> {
+  async updateUserRoles(
+    userId: string,
+    roles: Roles[],
+    performedBy: string,
+  ): Promise<User> {
     const user = await this.findById(userId);
     const updatedUser = await this.userRepository.updateUser(userId, { roles });
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
@@ -190,9 +217,15 @@ export class UserService {
    * @param performedBy The ID of the user performing the update.
    * @returns The updated user.
    */
-  async setUserRole(userId: string, role: Roles, performedBy: string): Promise<User> {
+  async setUserRole(
+    userId: string,
+    role: Roles,
+    performedBy: string,
+  ): Promise<User> {
     const user = await this.findById(userId);
-    const updatedUser = await this.userRepository.updateUser(userId, { roles: [role] });
+    const updatedUser = await this.userRepository.updateUser(userId, {
+      roles: [role],
+    });
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
       userId: performedBy,
       verb: ActivityVerb.UPDATE,
@@ -216,7 +249,9 @@ export class UserService {
    */
   async activateUser(userId: string, performedBy: string): Promise<User> {
     const user = await this.userRepository.findById(userId);
-    const updatedUser = await this.userRepository.updateUser(userId, { isActive: true });
+    const updatedUser = await this.userRepository.updateUser(userId, {
+      isActive: true,
+    });
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
       userId: performedBy,
       verb: ActivityVerb.UPDATE,
@@ -241,7 +276,9 @@ export class UserService {
    */
   async deactivateUser(userId: string, performedBy: string): Promise<User> {
     const user = await this.userRepository.findById(userId);
-    const updatedUser = await this.userRepository.updateUser(userId, { isActive: false });
+    const updatedUser = await this.userRepository.updateUser(userId, {
+      isActive: false,
+    });
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
       userId: performedBy,
       verb: ActivityVerb.UPDATE,
@@ -266,7 +303,9 @@ export class UserService {
    */
   async verifyUser(userId: string, performedBy: string): Promise<User> {
     const user = await this.userRepository.findById(userId);
-    const updatedUser = await this.userRepository.updateUser(userId, { isVerified: true });
+    const updatedUser = await this.userRepository.updateUser(userId, {
+      isVerified: true,
+    });
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
       userId: performedBy,
       verb: ActivityVerb.UPDATE,
@@ -291,7 +330,9 @@ export class UserService {
       if (filters.createdAfter || filters.createdBefore) {
         where.createdAt = {
           ...(filters.createdAfter && { gte: new Date(filters.createdAfter) }),
-          ...(filters.createdBefore && { lte: new Date(filters.createdBefore) }),
+          ...(filters.createdBefore && {
+            lte: new Date(filters.createdBefore),
+          }),
         };
       }
       if (filters.role) {

@@ -3,11 +3,11 @@ import { PrismaService } from '@providers/prisma';
 
 @Injectable()
 export class ProjectDocumentStatRepository {
-    constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-    findAll() {
-        return this.prisma.projectDocumentStat.findMany({
-            include: { project: true },
-        });
-    }
+  findAll() {
+    return this.prisma.projectDocumentStat.findMany({
+      include: { project: true },
+    });
+  }
 }

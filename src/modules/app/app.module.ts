@@ -29,7 +29,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ActivityLogsModule } from '@modules/activity-logs/activity-logs.module';
 import { NotificationModule } from '@modules/notification/notification.module';
 
-
 @Module({
   controllers: [],
   imports: [
@@ -90,4 +89,4 @@ import { NotificationModule } from '@modules/notification/notification.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

@@ -157,7 +157,11 @@ export class ProjectRepository {
           { projectManagerProjectIDs: { has: projectId } },
         ],
       },
-      select: { id: true, projectMemberProjectIDs: true, projectManagerProjectIDs: true }
+      select: {
+        id: true,
+        projectMemberProjectIDs: true,
+        projectManagerProjectIDs: true,
+      },
     });
 
     for (const user of affectedUsers) {
@@ -165,12 +169,12 @@ export class ProjectRepository {
         where: { id: user.id },
         data: {
           projectMemberProjectIDs: {
-            set: user.projectMemberProjectIDs.filter(id => id !== projectId)
+            set: user.projectMemberProjectIDs.filter((id) => id !== projectId),
           },
           projectManagerProjectIDs: {
-            set: user.projectManagerProjectIDs.filter(id => id !== projectId)
-          }
-        }
+            set: user.projectManagerProjectIDs.filter((id) => id !== projectId),
+          },
+        },
       });
     }
   }

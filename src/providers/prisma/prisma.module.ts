@@ -14,13 +14,13 @@ import { PrismaClient } from '@prisma/client';
 import { FilesModule } from '@modules/files/files.module';
 
 @Module({
-  providers: [
-    PrismaService,
-    PrismaClient,
-    PrismaMiddleware,
-  ],
+  providers: [PrismaService, PrismaClient, PrismaMiddleware],
   exports: [PrismaService],
-  imports: [forwardRef(() => SearchModule), MailModule, forwardRef(() => FilesModule)],
+  imports: [
+    forwardRef(() => SearchModule),
+    MailModule,
+    forwardRef(() => FilesModule),
+  ],
 })
 export class PrismaModule {
   static forRoot(options: PrismaModuleOptions = {}): DynamicModule {

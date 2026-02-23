@@ -3,12 +3,12 @@ import { PrismaService } from '@providers/prisma';
 
 @Injectable()
 export class UserActivityRepository {
-    constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-    findGrouped(from: Date, to: Date) {
-        return this.prisma.userActivityDaily.findMany({
-            where: { date: { gte: from, lte: to } },
-            orderBy: { date: 'asc' },
-        });
-    }
+  findGrouped(from: Date, to: Date) {
+    return this.prisma.userActivityDaily.findMany({
+      where: { date: { gte: from, lte: to } },
+      orderBy: { date: 'asc' },
+    });
+  }
 }

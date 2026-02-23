@@ -61,12 +61,18 @@ export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly uploadService: UploadService,
-  ) { }
+  ) {}
 
   @Get('members')
   @ApiOperation({ summary: 'Get all members' })
   @ApiOkBaseResponse({ dto: UserBaseEntity, isArray: true })
-  @ApiQuery({ name: 'all', required: false, type: Boolean, description: 'If true, returns all members regardless of active status. Defaults to false.' })
+  @ApiQuery({
+    name: 'all',
+    required: false,
+    type: Boolean,
+    description:
+      'If true, returns all members regardless of active status. Defaults to false.',
+  })
   @UseGuards(AccessGuard)
   @Serialize(UserBaseEntity)
   @UseAbility(Actions.read, UserEntity)
@@ -304,5 +310,4 @@ export class UserController {
     const user = await userProxy.get();
     return this.userService.verifyUser(userId, user.id);
   }
-
 }

@@ -53,7 +53,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
     private readonly passwordResetService: PasswordResetService,
-  ) { }
+  ) {}
 
   @SkipThrottle()
   @Version('1')
@@ -68,10 +68,13 @@ export class AuthController {
     const { password, ...rest } = signUpDto;
     const tokenUser = userProxy ? await userProxy.get() : null;
 
-    return this.authService.createAccount({
-      ...rest,
-      password: password || 'String!12345',
-    }, tokenUser?.id);
+    return this.authService.createAccount(
+      {
+        ...rest,
+        password: password || 'String!12345',
+      },
+      tokenUser?.id,
+    );
   }
 
   @Version('1')
@@ -84,7 +87,11 @@ export class AuthController {
     @Request() req: any,
     @Ip() deviceIp: string,
   ): Promise<Auth.AccessRefreshTokens> {
-    return this.authService.signIn(signInDto, deviceIp, req.headers['user-agent']);
+    return this.authService.signIn(
+      signInDto,
+      deviceIp,
+      req.headers['user-agent'],
+    );
   }
 
   @Version('1')
@@ -97,7 +104,11 @@ export class AuthController {
     @Request() req: any,
     @Ip() deviceIp: string,
   ): Promise<Auth.AccessRefreshTokens> {
-    return this.authService.googleLogin(googleLoginDto.idToken, deviceIp, req.headers['user-agent']);
+    return this.authService.googleLogin(
+      googleLoginDto.idToken,
+      deviceIp,
+      req.headers['user-agent'],
+    );
   }
 
   @Version('1')

@@ -1,9 +1,9 @@
 export class DashboardStatsDTO {
-    projectId?: string;
+  projectId?: string;
 }
 
 export interface StatMetric {
-    current: number;
-    change?: string;
-    isPositive?: boolean;
+  current: number;
+  change?: string;
+  isPositive?: boolean;
 }

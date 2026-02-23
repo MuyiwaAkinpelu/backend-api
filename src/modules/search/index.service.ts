@@ -6,7 +6,7 @@ import { documentIndex } from './constant/document.elastic';
 export class IndexService implements OnModuleInit {
   private readonly logger = new Logger(IndexService.name);
 
-  constructor(private readonly elasticsearchService: ElasticsearchService) { }
+  constructor(private readonly elasticsearchService: ElasticsearchService) {}
 
   async onModuleInit() {
     try {
@@ -15,7 +15,6 @@ export class IndexService implements OnModuleInit {
       this.logger.error('Elasticsearch unavailable, continuing startup');
     }
   }
-
 
   async createIndex(index: string) {
     const indexExists = await this.elasticsearchService.indices.exists({

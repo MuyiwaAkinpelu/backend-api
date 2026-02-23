@@ -1,4 +1,8 @@
-import { DeleteObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import {
   AWS_S3_BUCKET,
@@ -13,7 +17,14 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as officeParser from 'officeparser';
 import { Readable } from 'stream';
-import { ApprovalStatus, Roles, DocumentVisibility, ActivityVerb, ActivityEntity, ActivityOutcome } from '@prisma/client';
+import {
+  ApprovalStatus,
+  Roles,
+  DocumentVisibility,
+  ActivityVerb,
+  ActivityEntity,
+  ActivityOutcome,
+} from '@prisma/client';
 import { SearchService } from '@modules/search/search.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ActivityLogEvent } from '@modules/activity-logs/constants';
@@ -37,7 +48,7 @@ export class UploadService {
     });
     this.bucketUrl =
       this.configService.get(AWS_S3_ENDPOINT) ||
-        this.configService.get(AWS_S3_BUCKET)
+      this.configService.get(AWS_S3_BUCKET)
         ? `https://${this.configService.get(AWS_S3_BUCKET)}.s3.amazonaws.com`
         : 'https://scidar-drs-uploads.s3.amazonaws.com';
   }
@@ -139,29 +150,32 @@ export class UploadService {
           contentType,
           size,
           tags,
-          ...(userRoles.some(role => role === Roles.SYSTEM_ADMIN || role === Roles.MANAGEMENT_STAFF) &&
+          ...(userRoles.some(
+            (role) =>
+              role === Roles.SYSTEM_ADMIN || role === Roles.MANAGEMENT_STAFF,
+          ) &&
             projectId && {
-            approvalRequests: {
-              create: {
-                approvedBy: {
-                  connect: {
-                    id: uploaderId,
+              approvalRequests: {
+                create: {
+                  approvedBy: {
+                    connect: {
+                      id: uploaderId,
+                    },
                   },
-                },
-                project: {
-                  connect: {
-                    id: projectId,
+                  project: {
+                    connect: {
+                      id: projectId,
+                    },
                   },
+                  status: ApprovalStatus.APPROVED,
                 },
-                status: ApprovalStatus.APPROVED,
               },
-            },
-            // projects: {
-            //   connect: {
-            //     id: projectId,
-            //   },
-            // },
-          }),
+              // projects: {
+              //   connect: {
+              //     id: projectId,
+              //   },
+              // },
+            }),
           ...(projectId && {
             projects: {
               connect: {

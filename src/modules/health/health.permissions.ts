@@ -4,11 +4,11 @@ import { Roles } from '@modules/app/app.roles';
 export type Subjects = 'Health';
 
 export const permissions: Permissions<Roles, Subjects, Actions> = {
-    // everyone({ can }) {
-    //     can(Actions.read, 'Health');
-    // },
+  // everyone({ can }) {
+  //     can(Actions.read, 'Health');
+  // },
 
-    SYSTEM_ADMIN({ can }) {
-        can(Actions.manage, 'Health');
-    },
+  SYSTEM_ADMIN({ can }) {
+    can(Actions.manage, 'Health');
+  },
 };

@@ -11,19 +11,19 @@ import { CaslModule } from '@modules/casl';
 import { permissions } from './notification.permission';
 
 @Module({
-    imports: [
-        JwtModule.register({}),
-        UserModule,
-        CaslModule.forFeature({ permissions }),
-    ],
-    controllers: [NotificationController],
-    providers: [
-        NotificationService,
-        NotificationPreferenceService,
-        NotificationHelperService,
-        NotificationRepository,
-        NotificationGateway,
-    ],
-    exports: [NotificationService, NotificationPreferenceService],
+  imports: [
+    JwtModule.register({}),
+    UserModule,
+    CaslModule.forFeature({ permissions }),
+  ],
+  controllers: [NotificationController],
+  providers: [
+    NotificationService,
+    NotificationPreferenceService,
+    NotificationHelperService,
+    NotificationRepository,
+    NotificationGateway,
+  ],
+  exports: [NotificationService, NotificationPreferenceService],
 })
-export class NotificationModule { }
+export class NotificationModule {}

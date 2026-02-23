@@ -3,9 +3,19 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { TokenService } from './token.service';
 import { PrismaService } from '@providers/prisma';
 import { MailService } from '@modules/mail/services/mail.service';
-import { ActivityEntity, ActivityOutcome, ActivityVerb, SecurityEventType, TokenType, TokenUseCase } from '@prisma/client';
+import {
+  ActivityEntity,
+  ActivityOutcome,
+  ActivityVerb,
+  SecurityEventType,
+  TokenType,
+  TokenUseCase,
+} from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
+import {
+  ActivityLogEvent,
+  ActivityAction,
+} from '@modules/activity-logs/constants';
 
 import { ConfigService } from '@nestjs/config';
 import { CLIENT_URL } from '@constants/env.constants';
@@ -23,7 +33,6 @@ export class PasswordResetService {
   ) {
     this.clientURL = this.configService.getOrThrow(CLIENT_URL);
   }
-
 
   async requestPasswordReset(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
@@ -61,7 +70,6 @@ export class PasswordResetService {
       occurredAt: new Date(),
     });
   }
-
 
   async newAccountResetLink(id) {
     const token = await this.tokenService.create(
@@ -119,5 +127,4 @@ export class PasswordResetService {
       occurredAt: new Date(),
     });
   }
-
 }

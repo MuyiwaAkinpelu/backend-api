@@ -24,7 +24,9 @@ export class PrismaMiddleware {
     private readonly mailService: MailService,
   ) {
     this.logger = new Logger(PrismaMiddleware.name);
-    this.logger.log(`PrismaMiddleware initialized. IS_SEEDING: ${process.env.IS_SEEDING}`);
+    this.logger.log(
+      `PrismaMiddleware initialized. IS_SEEDING: ${process.env.IS_SEEDING}`,
+    );
   }
 
   createFileMiddleware(): Prisma.Middleware {
@@ -90,7 +92,9 @@ export class PrismaMiddleware {
             );
 
           if (updatingCountersOnly) {
-            console.log('Skipping text extraction and ES update for counter-only updates');
+            console.log(
+              'Skipping text extraction and ES update for counter-only updates',
+            );
 
             // Skip text extraction and ES update for counter-only updates
             return result;
@@ -100,9 +104,14 @@ export class PrismaMiddleware {
             result.filename,
             result.contentType,
           );
+
+          // Regenerate filenameKeywords if name was updated
+          const filenameKeywords = extractKeywords(result.originalFilename);
+
           await this.documentESIndex.updateFileDocument({
             ...result,
             content,
+            filenameKeywords,
           });
         } catch (error) {
           this.logger.error(error);

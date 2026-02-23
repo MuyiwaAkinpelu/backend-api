@@ -7,17 +7,17 @@ import SecurityEventStatEntity from './entities/security-event-stat.entity';
 import UserActivityDailyEntity from './entities/user-activity-daily.entity';
 
 export type Subjects = InferSubjects<
-    | typeof DailyUploadStatEntity
-    | typeof ProjectDocumentStatEntity
-    | typeof SecurityEventStatEntity
-    | typeof UserActivityDailyEntity
+  | typeof DailyUploadStatEntity
+  | typeof ProjectDocumentStatEntity
+  | typeof SecurityEventStatEntity
+  | typeof UserActivityDailyEntity
 >;
 
 export const permissions: Permissions<Roles, Subjects, Actions> = {
-    SYSTEM_ADMIN({ can }) {
-        can(Actions.manage, DailyUploadStatEntity);
-        can(Actions.manage, ProjectDocumentStatEntity);
-        can(Actions.manage, SecurityEventStatEntity);
-        can(Actions.manage, UserActivityDailyEntity);
-    }
+  SYSTEM_ADMIN({ can }) {
+    can(Actions.manage, DailyUploadStatEntity);
+    can(Actions.manage, ProjectDocumentStatEntity);
+    can(Actions.manage, SecurityEventStatEntity);
+    can(Actions.manage, UserActivityDailyEntity);
+  },
 };

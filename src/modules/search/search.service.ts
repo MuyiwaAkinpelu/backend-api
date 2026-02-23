@@ -22,23 +22,23 @@ export class SearchService implements SearchServiceInterface<any> {
     @Inject(forwardRef(() => PrismaService))
     private readonly prisma: PrismaService,
     private readonly documentElasticIndex: DocumentElasticIndex,
-  ) { }
+  ) {}
 
   public async insertIndex(bulkData: any[]): Promise<any> {
-
     bulkData.forEach((item, i) => {
       if (typeof item !== 'object' || item === null || Array.isArray(item)) {
         this.logger.error(
-          `Invalid bulk item at index ${i}: ${JSON.stringify(item)}`
+          `Invalid bulk item at index ${i}: ${JSON.stringify(item)}`,
         );
         throw new Error('Invalid Elasticsearch bulk payload');
       }
     });
 
-    return await this.elasticsearchService.bulk({
-      body: bulkData,
-      refresh: true,
-    })
+    return await this.elasticsearchService
+      .bulk({
+        body: bulkData,
+        refresh: true,
+      })
       .then((res) => res)
       .catch((err) => {
         this.logger.error(err); // Log error
@@ -47,7 +47,8 @@ export class SearchService implements SearchServiceInterface<any> {
   }
 
   public async updateIndex(updateData: any): Promise<any> {
-    return await this.elasticsearchService.update(updateData)
+    return await this.elasticsearchService
+      .update(updateData)
       .then((res) => res)
       .catch((err) => {
         this.logger.error(err); // Log error
@@ -56,7 +57,8 @@ export class SearchService implements SearchServiceInterface<any> {
   }
 
   public async searchIndex(searchData: any): Promise<any> {
-    return await this.elasticsearchService.search(searchData)
+    return await this.elasticsearchService
+      .search(searchData)
       .then((res) => {
         this.logger.log(res);
         return res.hits.hits;
@@ -68,7 +70,8 @@ export class SearchService implements SearchServiceInterface<any> {
   }
 
   public async suggest(suggestData: any): Promise<any> {
-    return await this.elasticsearchService.search(suggestData)
+    return await this.elasticsearchService
+      .search(suggestData)
       .then((res) => {
         return res.hits.hits;
       })
@@ -89,7 +92,8 @@ export class SearchService implements SearchServiceInterface<any> {
   }
 
   public async deleteDocument(indexData: any): Promise<any> {
-    return await this.elasticsearchService.delete(indexData)
+    return await this.elasticsearchService
+      .delete(indexData)
       .then((res) => res)
       .catch((err) => {
         this.logger.error(err); // Log error
@@ -98,15 +102,16 @@ export class SearchService implements SearchServiceInterface<any> {
   }
 
   public async debugGetAll(index: string): Promise<any> {
-    return await this.elasticsearchService.search({
-      index,
-      body: {
-        query: {
-          match_all: {},
+    return await this.elasticsearchService
+      .search({
+        index,
+        body: {
+          query: {
+            match_all: {},
+          },
+          size: 1000, // Retrieve up to 1000 documents
         },
-        size: 1000, // Retrieve up to 1000 documents
-      },
-    })
+      })
       .then((res) => {
         return {
           total: res.hits.total,

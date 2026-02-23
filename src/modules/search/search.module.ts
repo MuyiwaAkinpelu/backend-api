@@ -36,6 +36,11 @@ import { DocumentElasticIndex } from './search-index/document.elastic.index';
     DocumentElasticIndex,
   ],
   controllers: [SearchController],
-  exports: ['SearchServiceInterface', SearchService, IndexService, DocumentElasticIndex],
+  exports: [
+    'SearchServiceInterface',
+    SearchService,
+    IndexService,
+    DocumentElasticIndex,
+  ],
 })
-export class SearchModule { }
+export class SearchModule {}

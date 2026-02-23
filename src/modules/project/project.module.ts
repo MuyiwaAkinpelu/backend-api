@@ -14,7 +14,11 @@ import { FilesModule } from '@modules/files/files.module';
 import { forwardRef } from '@nestjs/common';
 
 @Module({
-  imports: [CaslModule.forFeature({ permissions }), UserModule, forwardRef(() => FilesModule)],
+  imports: [
+    CaslModule.forFeature({ permissions }),
+    UserModule,
+    forwardRef(() => FilesModule),
+  ],
   providers: [
     ProjectService,
     ApprovalRequestService,
@@ -24,4 +28,4 @@ import { forwardRef } from '@nestjs/common';
   controllers: [ProjectController, ApprovalRequestController],
   exports: [ProjectRepository, ApprovalRequestRepository],
 })
-export class ProjectModule { }
+export class ProjectModule {}

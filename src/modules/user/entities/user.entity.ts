@@ -1,4 +1,9 @@
-import { Notification, NotificationPreference, Roles, User } from '@prisma/client';
+import {
+  Notification,
+  NotificationPreference,
+  Roles,
+  User,
+} from '@prisma/client';
 
 export default class UserEntity implements User {
   lastLogin: Date;

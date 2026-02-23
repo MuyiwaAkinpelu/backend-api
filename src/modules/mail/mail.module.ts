@@ -51,4 +51,4 @@ import { permissions } from './mail.permissions';
   providers: [MailService],
   exports: [MailService],
 })
-export class MailModule { }
+export class MailModule {}

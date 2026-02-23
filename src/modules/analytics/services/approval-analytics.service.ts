@@ -6,123 +6,135 @@ import * as moment from 'moment';
 
 @Injectable()
 export class ApprovalAnalyticsService {
-    constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
-    async getMetricWithTrend(
-        where: Prisma.ApprovalRequestWhereInput = {},
-        useCurrentInterval = false
-    ): Promise<StatMetric> {
+  async getMetricWithTrend(
+    where: Prisma.ApprovalRequestWhereInput = {},
+    useCurrentInterval = false,
+  ): Promise<StatMetric> {
+    const thirtyDaysAgo = moment().subtract(30, 'days').toDate();
+    const sixtyDaysAgo = moment().subtract(60, 'days').toDate();
 
-        const thirtyDaysAgo = moment().subtract(30, 'days').toDate();
-        const sixtyDaysAgo = moment().subtract(60, 'days').toDate();
+    const [current, previous, total] = await Promise.all([
+      this.prisma.approvalRequest.count({
+        where: { ...where, createdAt: { gte: thirtyDaysAgo } },
+      }),
+      this.prisma.approvalRequest.count({
+        where: {
+          ...where,
+          createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo },
+        },
+      }),
+      this.prisma.approvalRequest.count({ where }),
+    ]);
 
-        const [current, previous, total] = await Promise.all([
-            this.prisma.approvalRequest.count({
-                where: { ...where, createdAt: { gte: thirtyDaysAgo } }
-            }),
-            this.prisma.approvalRequest.count({
-                where: { ...where, createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } }
-            }),
-            this.prisma.approvalRequest.count({ where })
-        ]);
-
-        if (previous === 0) {
-            return { current: total };
-        }
-
-        const change = ((current - previous) / previous) * 100;
-        const isPositive = change >= 0;
-        const changeStr = `${isPositive ? '+' : ''}${change.toFixed(1)}%`;
-
-        return {
-            current: useCurrentInterval ? current : total,
-            change: changeStr,
-            isPositive
-        };
+    if (previous === 0) {
+      return { current: total };
     }
 
-    async recentApproved(limit = 6, where: Prisma.ApprovalRequestWhereInput = {}) {
-        return this.prisma.approvalRequest.findMany({
-            where: { ...where, status: ApprovalStatus.APPROVED },
-            orderBy: { updatedAt: 'desc' },
-            take: limit,
-            include: {
-                document: { select: { originalFilename: true, id: true, filename: true } },
-                approvedBy: { select: { firstName: true, lastName: true } },
-                project: { select: { name: true, id: true } }
-            }
-        });
-    }
+    const change = ((current - previous) / previous) * 100;
+    const isPositive = change >= 0;
+    const changeStr = `${isPositive ? '+' : ''}${change.toFixed(1)}%`;
 
-    async getMySubmissions(userId: string, limit = 6) {
-        return this.prisma.approvalRequest.findMany({
-            where: { submittedById: userId },
-            orderBy: { updatedAt: 'desc' },
-            take: limit,
-            include: {
-                document: { select: { originalFilename: true, id: true, filename: true } },
-                approvedBy: { select: { firstName: true, lastName: true } },
-                project: { select: { name: true, id: true } }
-            }
-        });
-    }
+    return {
+      current: useCurrentInterval ? current : total,
+      change: changeStr,
+      isPositive,
+    };
+  }
 
-    async count(where: Prisma.ApprovalRequestWhereInput = {}): Promise<number> {
-        return this.prisma.approvalRequest.count({ where });
-    }
+  async recentApproved(
+    limit = 6,
+    where: Prisma.ApprovalRequestWhereInput = {},
+  ) {
+    return this.prisma.approvalRequest.findMany({
+      where: { ...where, status: ApprovalStatus.APPROVED },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      include: {
+        document: {
+          select: { originalFilename: true, id: true, filename: true },
+        },
+        approvedBy: { select: { firstName: true, lastName: true } },
+        project: { select: { name: true, id: true } },
+      },
+    });
+  }
 
-    async getSummaryStats(where: Prisma.ApprovalRequestWhereInput = {}) {
-        const thirtyDaysAgo = moment().subtract(30, 'days').toDate();
-        const sixtyDaysAgo = moment().subtract(60, 'days').toDate();
+  async getMySubmissions(userId: string, limit = 6) {
+    return this.prisma.approvalRequest.findMany({
+      where: { submittedById: userId },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      include: {
+        document: {
+          select: { originalFilename: true, id: true, filename: true },
+        },
+        approvedBy: { select: { firstName: true, lastName: true } },
+        project: { select: { name: true, id: true } },
+      },
+    });
+  }
 
-        const [currentStats, previousStats, totalStats] = await Promise.all([
-            this.prisma.approvalRequest.groupBy({
-                by: ['status'],
-                where: { ...where, createdAt: { gte: thirtyDaysAgo } },
-                _count: { id: true }
-            }),
-            this.prisma.approvalRequest.groupBy({
-                by: ['status'],
-                where: { ...where, createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo } },
-                _count: { id: true }
-            }),
-            this.prisma.approvalRequest.groupBy({
-                by: ['status'],
-                where: { ...where },
-                _count: { id: true }
-            })
-        ]);
+  async count(where: Prisma.ApprovalRequestWhereInput = {}): Promise<number> {
+    return this.prisma.approvalRequest.count({ where });
+  }
 
-        const formatStats = (stats: any[]) => {
-            const map = new Map<ApprovalStatus, number>();
-            stats.forEach(s => map.set(s.status, s._count.id));
-            return map;
-        };
+  async getSummaryStats(where: Prisma.ApprovalRequestWhereInput = {}) {
+    const thirtyDaysAgo = moment().subtract(30, 'days').toDate();
+    const sixtyDaysAgo = moment().subtract(60, 'days').toDate();
 
-        const currentMap = formatStats(currentStats);
-        const previousMap = formatStats(previousStats);
-        const totalMap = formatStats(totalStats);
+    const [currentStats, previousStats, totalStats] = await Promise.all([
+      this.prisma.approvalRequest.groupBy({
+        by: ['status'],
+        where: { ...where, createdAt: { gte: thirtyDaysAgo } },
+        _count: { id: true },
+      }),
+      this.prisma.approvalRequest.groupBy({
+        by: ['status'],
+        where: {
+          ...where,
+          createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo },
+        },
+        _count: { id: true },
+      }),
+      this.prisma.approvalRequest.groupBy({
+        by: ['status'],
+        where: { ...where },
+        _count: { id: true },
+      }),
+    ]);
 
-        const getMetric = (status: ApprovalStatus) => {
-            const total = totalMap.get(status) || 0;
-            const current = currentMap.get(status) || 0;
-            const previous = previousMap.get(status) || 0;
+    const formatStats = (stats: any[]) => {
+      const map = new Map<ApprovalStatus, number>();
+      stats.forEach((s) => map.set(s.status, s._count.id));
+      return map;
+    };
 
-            if (previous === 0) return { current: total };
+    const currentMap = formatStats(currentStats);
+    const previousMap = formatStats(previousStats);
+    const totalMap = formatStats(totalStats);
 
-            const change = ((current - previous) / previous) * 100;
-            const isPositive = change >= 0;
-            return {
-                current: total,
-                change: `${isPositive ? '+' : ''}${change.toFixed(1)}%`,
-                isPositive
-            };
-        };
+    const getMetric = (status: ApprovalStatus) => {
+      const total = totalMap.get(status) || 0;
+      const current = currentMap.get(status) || 0;
+      const previous = previousMap.get(status) || 0;
 
-        return {
-            pending: getMetric(ApprovalStatus.PENDING),
-            approved: getMetric(ApprovalStatus.APPROVED),
-            declined: getMetric(ApprovalStatus.DECLINED)
-        };
-    }
+      if (previous === 0) return { current: total };
+
+      const change = ((current - previous) / previous) * 100;
+      const isPositive = change >= 0;
+      return {
+        current: total,
+        change: `${isPositive ? '+' : ''}${change.toFixed(1)}%`,
+        isPositive,
+      };
+    };
+
+    return {
+      pending: getMetric(ApprovalStatus.PENDING),
+      approved: getMetric(ApprovalStatus.APPROVED),
+      declined: getMetric(ApprovalStatus.DECLINED),
+    };
+  }
 }

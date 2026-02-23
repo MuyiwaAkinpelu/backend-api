@@ -7,7 +7,16 @@ import {
 } from '@nestjs/common';
 import { ApprovalRequestRepository } from './approval-request.repository';
 import { PrismaService } from '@providers/prisma';
-import { ApprovalRequest, ApprovalStatus, Prisma, Roles, ActivityVerb, ActivityEntity, ActivityOutcome, SecurityEventType } from '@prisma/client';
+import {
+  ApprovalRequest,
+  ApprovalStatus,
+  Prisma,
+  Roles,
+  ActivityVerb,
+  ActivityEntity,
+  ActivityOutcome,
+  SecurityEventType,
+} from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ActivityLogEvent } from '@modules/activity-logs/constants';
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
@@ -36,7 +45,7 @@ export class ApprovalRequestService {
     private readonly projectRepository: ProjectRepository,
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   async findById(id: string): Promise<ApprovalRequest> {
     const approvalRequest = await this.approvalRequestRepository.findById(id);
@@ -147,7 +156,6 @@ export class ApprovalRequestService {
     return request;
   }
 
-
   async approveRequest(
     requestId: string,
     userId: string,
@@ -205,8 +213,8 @@ export class ApprovalRequestService {
           where: { id: requestId },
           include: {
             document: { select: { originalFilename: true } },
-            project: { select: { name: true } }
-          }
+            project: { select: { name: true } },
+          },
         });
 
         this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
@@ -254,7 +262,6 @@ export class ApprovalRequestService {
     }
 
     if (!user.roles.includes(Roles.SYSTEM_ADMIN)) {
-
       // Validate project existence and user membership (as manager)
       const isUserManagerOfProject =
         await this.projectRepository.isUserManagerOfProject(
@@ -285,8 +292,8 @@ export class ApprovalRequestService {
       where: { id: requestId },
       include: {
         document: { select: { originalFilename: true } },
-        project: { select: { name: true } }
-      }
+        project: { select: { name: true } },
+      },
     });
 
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
@@ -387,7 +394,9 @@ export class ApprovalRequestService {
     for (const requestId of requestIds) {
       try {
         // Validate request existence
-        const request = await this.approvalRequestRepository.findById(requestId);
+        const request = await this.approvalRequestRepository.findById(
+          requestId,
+        );
         if (!request) {
           failed.push({ requestId, error: REQUEST_NOT_FOUND });
           continue;
@@ -438,7 +447,7 @@ export class ApprovalRequestService {
         // Emit log
         const fullRequest = await this.prisma.approvalRequest.findUnique({
           where: { id: requestId },
-          include: { document: { select: { originalFilename: true } } }
+          include: { document: { select: { originalFilename: true } } },
         });
 
         this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
@@ -488,7 +497,9 @@ export class ApprovalRequestService {
     for (const requestId of requestIds) {
       try {
         // Validate request existence
-        const request = await this.approvalRequestRepository.findById(requestId);
+        const request = await this.approvalRequestRepository.findById(
+          requestId,
+        );
         if (!request) {
           failed.push({ requestId, error: REQUEST_NOT_FOUND });
           continue;
@@ -524,7 +535,7 @@ export class ApprovalRequestService {
         // Emit log
         const fullRequest = await this.prisma.approvalRequest.findUnique({
           where: { id: requestId },
-          include: { document: { select: { originalFilename: true } } }
+          include: { document: { select: { originalFilename: true } } },
         });
 
         this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {

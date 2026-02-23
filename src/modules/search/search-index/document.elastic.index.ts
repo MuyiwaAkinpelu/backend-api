@@ -3,6 +3,7 @@ import { SearchServiceInterface } from '../interface/search.service.interface';
 import { documentIndex } from '../constant/document.elastic';
 import { File } from '@prisma/client';
 import { FileWithContent } from '@modules/files/types';
+import { extractKeywords } from '../../../common/utils';
 // import { IndexService } from '../index.service';
 
 @Injectable()
@@ -77,6 +78,9 @@ export class DocumentElasticIndex {
         createdAt: file.uploadDate,
         tags: file.tags,
         description: file.description,
+        filenameKeywords:
+          file.filenameKeywords ||
+          extractKeywords(file.originalFilename).join(' '),
       },
     ];
   }

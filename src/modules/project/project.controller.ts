@@ -11,7 +11,13 @@ import {
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { Project, User, File } from '@prisma/client';
-import { AccessGuard, Actions, CaslUser, UseAbility, UserProxy } from '@modules/casl';
+import {
+  AccessGuard,
+  Actions,
+  CaslUser,
+  UseAbility,
+  UserProxy,
+} from '@modules/casl';
 import {
   ApiTags,
   ApiOperation,
@@ -39,7 +45,7 @@ import ProjectEntity from './entities/project.entity';
 @SkipThrottle()
 @Controller('projects')
 export class ProjectController {
-  constructor(private readonly projectService: ProjectService) { }
+  constructor(private readonly projectService: ProjectService) {}
 
   @Get('mine')
   @ApiOperation({ summary: 'Get projects for logged-in user' })
@@ -55,7 +61,6 @@ export class ProjectController {
     const user = await userProxy.get();
     return this.projectService.getMyProjects(user, paginationDTO);
   }
-
 
   @Get(':projectId')
   @ApiOperation({ summary: 'Find project by ID' })
@@ -96,7 +101,6 @@ export class ProjectController {
     const user = userProxy ? await userProxy.get() : null;
     return this.projectService.create(data, user?.id);
   }
-
 
   @Patch(':projectId')
   @ApiOperation({ summary: 'Update a project by ID' })
@@ -148,7 +152,6 @@ export class ProjectController {
     return this.projectService.addMember(projectId, userId, user.id);
   }
 
-
   @Delete(':projectId/members/:userId')
   @ApiOperation({ summary: 'Remove member from project' })
   @ApiResponse({
@@ -165,7 +168,6 @@ export class ProjectController {
     const user = await userProxy.get();
     return this.projectService.removeMember(projectId, userId, user.id);
   }
-
 
   @Post(':projectId/managers/:userId')
   @ApiOperation({ summary: 'Add manager to project' })
@@ -184,7 +186,6 @@ export class ProjectController {
     return this.projectService.addManager(projectId, userId, user.id);
   }
 
-
   @Delete(':projectId/managers/:userId')
   @ApiOperation({ summary: 'Remove manager from project' })
   @ApiResponse({
@@ -202,7 +203,6 @@ export class ProjectController {
     return this.projectService.removeManager(projectId, userId, user.id);
   }
 
-
   @Get(':projectId/documents')
   @ApiOperation({ summary: 'Get all documents in a project' })
   @ApiResponse({
@@ -210,10 +210,7 @@ export class ProjectController {
     description: 'Documents retrieved',
     // type: [DocumentBaseEntity],
   })
-  async getDocuments(
-    @Param('projectId') projectId: string,
-  ): Promise<File[]> {
+  async getDocuments(@Param('projectId') projectId: string): Promise<File[]> {
     return this.projectService.getDocuments(projectId);
   }
-
 }

@@ -40,7 +40,7 @@ import {
 export class ApprovalRequestController {
   constructor(
     private readonly approvalRequestService: ApprovalRequestService,
-  ) { }
+  ) {}
 
   @Get('/manager')
   @ApiOperation({ summary: 'Get approval requests for a manager' })
@@ -291,6 +291,4 @@ export class ApprovalRequestController {
     const tokenUser = await userProxy.get();
     await this.approvalRequestService.cancelRequest(id, tokenUser.id);
   }
-
-
 }

@@ -1,4 +1,10 @@
-import { ActivityLog, ActivityVerb, ActivityEntity, SecurityEventType, ActivityOutcome } from '@prisma/client';
+import {
+  ActivityLog,
+  ActivityVerb,
+  ActivityEntity,
+  SecurityEventType,
+  ActivityOutcome,
+} from '@prisma/client';
 
 export default class ActivityLogEntity implements ActivityLog {
   readonly id!: string;

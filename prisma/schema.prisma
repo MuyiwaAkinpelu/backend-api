@@ -244,6 +244,7 @@ model Project {
 
   approvalRequests     ApprovalRequest[]
   projectDocumentStats ProjectDocumentStat[]
+  @@index([category])
 }
 
 enum Status {

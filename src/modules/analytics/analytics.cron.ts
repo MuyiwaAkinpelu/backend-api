@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { ActivityEntity, ActivityVerb, SecurityEventType } from '@prisma/client';
+import {
+  ActivityEntity,
+  ActivityVerb,
+  SecurityEventType,
+} from '@prisma/client';
 import { PrismaService } from '@providers/prisma';
 import { getDayWindow } from 'src/common/utils';
 import { startOfDay, endOfDay } from 'date-fns';
@@ -9,7 +13,7 @@ import { startOfDay, endOfDay } from 'date-fns';
 export class AnalyticsCron {
   private readonly logger = new Logger(AnalyticsCron.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Runs every 12 hours (00:00 and 12:00)
@@ -125,7 +129,6 @@ export class AnalyticsCron {
     }
   }
 
-
   // async aggregateSecurityEvents(date: Date = new Date()) {
   //   const start = startOfDay(date);
   //   const end = endOfDay(date);
@@ -237,8 +240,4 @@ export class AnalyticsCron {
       });
     }
   }
-
-
-
 }
-

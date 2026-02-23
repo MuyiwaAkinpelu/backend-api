@@ -1,5 +1,5 @@
-import { ActivityEntity, ActivityVerb } from "@prisma/client";
-import { IsDateString, IsEnum, IsOptional, IsString } from "class-validator";
+import { ActivityEntity, ActivityVerb } from '@prisma/client';
+import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class ActivityLogsFiltersDTO {
   @IsOptional()

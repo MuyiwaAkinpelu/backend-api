@@ -27,11 +27,21 @@ import {
 } from '@nestjs/swagger';
 import { DocumentService } from './document.service';
 import { UploadService } from './upload.service';
-import { ActivityAction, ActivityLogEvent } from '@modules/activity-logs/constants';
+import {
+  ActivityAction,
+  ActivityLogEvent,
+} from '@modules/activity-logs/constants';
 import { FilesInterceptor } from '@nestjs/platform-express';
 
 import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
-import { DocumentVisibility, File, User, ActivityVerb, ActivityEntity, ActivityOutcome } from '@prisma/client';
+import {
+  DocumentVisibility,
+  File,
+  User,
+  ActivityVerb,
+  ActivityEntity,
+  ActivityOutcome,
+} from '@prisma/client';
 import { CaslUser, UserProxy } from '@modules/casl';
 import { DocumentSearchDTO } from './dto/document-search.dto';
 import ApiBaseResponses from '@decorators/api-base-response.decorator';
@@ -47,7 +57,6 @@ import { SkipAuth } from '@modules/auth/guard/skip-auth.guard';
 import { ParseMongoIdPipe } from '@pipes/parse-mongoid.pipe';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-
 @ApiTags('Documents')
 @ApiBearerAuth()
 @ApiExtraModels(FileBaseEntity)
@@ -59,7 +68,7 @@ export class DocumentController {
     private readonly documentService: DocumentService,
     private readonly uploadService: UploadService,
     private readonly eventEmitter: EventEmitter2,
-  ) { }
+  ) {}
 
   @ApiOperation({ summary: 'Search within publicly available documents' })
   @ApiResponse({ status: 200, description: 'Search successful' })
@@ -159,7 +168,10 @@ export class DocumentController {
   @Get('public')
   @SkipAuth()
   @ApiOperation({ summary: 'Get all public documents' })
-  @ApiResponse({ status: 200, description: 'Public documents retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Public documents retrieved successfully',
+  })
   async getPublicDocuments(
     @Query() paginationDTO: ListDocumentsDTO,
   ): Promise<PaginatorTypes.PaginatedResult<File>> {
@@ -208,7 +220,11 @@ export class DocumentController {
   ) {
     const user = await userProxy.get();
     const { originalFilename } = renameDocumentDto;
-    return this.documentService.renameDocument(documentId, originalFilename, user.id);
+    return this.documentService.renameDocument(
+      documentId,
+      originalFilename,
+      user.id,
+    );
   }
 
   @Patch(':documentId/public')
@@ -223,7 +239,10 @@ export class DocumentController {
     @CaslUser() userProxy?: UserProxy<User>,
   ) {
     const user = await userProxy.get();
-    return this.documentService.setDocumentVisibilityToPublic(documentId, user.id);
+    return this.documentService.setDocumentVisibilityToPublic(
+      documentId,
+      user.id,
+    );
   }
 
   @Patch(':documentId/private')
@@ -238,9 +257,11 @@ export class DocumentController {
     @CaslUser() userProxy?: UserProxy<User>,
   ) {
     const user = await userProxy.get();
-    return this.documentService.setDocumentVisibilityToPrivate(documentId, user.id);
+    return this.documentService.setDocumentVisibilityToPrivate(
+      documentId,
+      user.id,
+    );
   }
-
 
   @Delete(':documentId')
   @ApiOperation({ summary: 'Delete a document' })
@@ -263,7 +284,6 @@ export class DocumentController {
     @Res() res,
     @CaslUser() userProxy?: UserProxy<User>,
   ) {
-
     const document = await this.documentService.getDocumentById(documentId);
 
     if (!document) {
@@ -278,13 +298,11 @@ export class DocumentController {
       userId: user?.id,
     });
 
-
     res.set({
       'Content-Type': document.contentType,
       'Content-Disposition': `attachment; filename="${document.originalFilename}"`,
     });
     console.log('Starting file stream for:', documentId);
-
 
     // Handle stream errors
     fileStream.on('error', (error) => {
@@ -302,11 +320,14 @@ export class DocumentController {
       console.log('Response closed for:', documentId);
     });
 
-    fileStream.pipe(res).on('finish', () => {
-      console.log('Stream finished successfully for:', documentId);
-    }).on('error', (error) => {
-      console.error('Pipe error:', error);
-    });
+    fileStream
+      .pipe(res)
+      .on('finish', () => {
+        console.log('Stream finished successfully for:', documentId);
+      })
+      .on('error', (error) => {
+        console.error('Pipe error:', error);
+      });
   }
 
   @Get('preview/:documentId')
@@ -319,7 +340,10 @@ export class DocumentController {
     @CaslUser() userProxy?: UserProxy<User>,
   ) {
     const user = await userProxy?.get();
-    const document = await this.documentService.getDocumentById(documentId, true);
+    const document = await this.documentService.getDocumentById(
+      documentId,
+      true,
+    );
 
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });
@@ -348,4 +372,3 @@ export class DocumentController {
     fileStream.pipe(res);
   }
 }
-

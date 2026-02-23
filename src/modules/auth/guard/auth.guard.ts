@@ -18,7 +18,7 @@ export class AuthGuard implements CanActivate {
     private readonly configService: ConfigService,
     private readonly authTokenService: AuthTokenService,
     private reflector: Reflector,
-  ) { }
+  ) {}
 
   /**
    * @desc Check if user is authenticated

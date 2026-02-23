@@ -24,4 +24,4 @@ import { PasswordResetService } from './password-reset.service';
   ],
   exports: [AuthTokenService, AuthService, TokenService, RedisService],
 })
-export class AuthModule { }
+export class AuthModule {}

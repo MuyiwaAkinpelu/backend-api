@@ -47,8 +47,7 @@ import { forwardRef } from '@nestjs/common';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-
   ],
   exports: [DocumentService, FileRepository, UploadService],
 })
-export class FilesModule { }
+export class FilesModule {}

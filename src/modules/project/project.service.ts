@@ -1,8 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ProjectRepository } from './project.repository';
-import { Project, Prisma, User, ActivityEntity, ActivityVerb, Status, ActivityOutcome, SecurityEventType } from '@prisma/client';
+import {
+  Project,
+  Prisma,
+  User,
+  ActivityEntity,
+  ActivityVerb,
+  Status,
+  ActivityOutcome,
+  SecurityEventType,
+} from '@prisma/client';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ActivityLogEvent, ActivityAction } from '@modules/activity-logs/constants';
+import {
+  ActivityLogEvent,
+  ActivityAction,
+} from '@modules/activity-logs/constants';
 
 import { PaginatorTypes } from '@nodeteam/nestjs-prisma-pagination';
 import { PROJECT_NOT_FOUND } from '@constants/errors.constants';
@@ -19,42 +31,45 @@ export class ProjectService {
     private readonly projectRepository: ProjectRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
-  async findById(id: string): Promise<Omit<Project, 'documentsIDs' | 'managersIDs' | 'membersIDs'> & { documentCount: number }> {
-    const project = await this.projectRepository.findById(id,
-      {
-        managers: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            avatar: true,
-            department: true,
-            roles: true,
-          },
+  async findById(id: string): Promise<
+    Omit<Project, 'documentsIDs' | 'managersIDs' | 'membersIDs'> & {
+      documentCount: number;
+    }
+  > {
+    const project = await this.projectRepository.findById(id, {
+      managers: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          avatar: true,
+          department: true,
+          roles: true,
         },
-        members: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            avatar: true,
-            department: true,
-            roles: true,
-          },
+      },
+      members: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          avatar: true,
+          department: true,
+          roles: true,
         },
-      }
-    );
+      },
+    });
     if (!project) {
       throw new NotFoundException(PROJECT_NOT_FOUND);
     }
 
-    const { documentsIDs, managersIDs, membersIDs, ...projectWithoutDocIds } = project as any;
+    const { documentsIDs, managersIDs, membersIDs, ...projectWithoutDocIds } =
+      project as any;
     const documentCount = await this.prisma.approvalRequest.count({
       where: {
         projectId: id,
@@ -123,10 +138,13 @@ export class ProjectService {
 
     const countsMap = new Map(counts.map((c) => [c.projectId, c._count.id]));
 
-    result.data = result.data.map((p) => ({
-      ...p,
-      documentCount: countsMap.get(p.id) || 0,
-    } as any));
+    result.data = result.data.map(
+      (p) =>
+        ({
+          ...p,
+          documentCount: countsMap.get(p.id) || 0,
+        } as any),
+    );
 
     return result;
   }
@@ -167,8 +185,11 @@ export class ProjectService {
     return project;
   }
 
-
-  async update(id: string, data: UpdateProjectDTO, performedBy: string): Promise<Project> {
+  async update(
+    id: string,
+    data: UpdateProjectDTO,
+    performedBy: string,
+  ): Promise<Project> {
     const { projectManagersIDs, projectMembersIDs, ...rest } = data;
 
     const projectData: Prisma.ProjectUpdateInput = {
@@ -189,11 +210,19 @@ export class ProjectService {
       }),
     };
 
-    const updatedProject = await this.projectRepository.updateProject(id, projectData);
+    const updatedProject = await this.projectRepository.updateProject(
+      id,
+      projectData,
+    );
 
     this.eventEmitter.emit('project.updated', {
       projectId: id,
-      members: Array.from(new Set([...(updatedProject.membersIDs || []), ...(updatedProject.managersIDs || [])])),
+      members: Array.from(
+        new Set([
+          ...(updatedProject.membersIDs || []),
+          ...(updatedProject.managersIDs || []),
+        ]),
+      ),
       name: updatedProject.name,
     });
 
@@ -207,12 +236,14 @@ export class ProjectService {
       metadata: {
         projectName: updatedProject.name,
         updates: data,
-        action: data.status === Status.INACTIVE ? ActivityAction.DEACTIVATED : ActivityAction.UPDATED,
+        action:
+          data.status === Status.INACTIVE
+            ? ActivityAction.DEACTIVATED
+            : ActivityAction.UPDATED,
       },
 
       occurredAt: new Date(),
     });
-
 
     return updatedProject;
   }
@@ -242,13 +273,20 @@ export class ProjectService {
     return deletedProject;
   }
 
-  async addMember(projectId: string, userId: string, performedBy: string): Promise<Project> {
+  async addMember(
+    projectId: string,
+    userId: string,
+    performedBy: string,
+  ): Promise<Project> {
     const project = await this.findById(projectId);
-    const updatedProject = await this.projectRepository.updateProject(projectId, {
-      members: {
-        connect: { id: userId },
+    const updatedProject = await this.projectRepository.updateProject(
+      projectId,
+      {
+        members: {
+          connect: { id: userId },
+        },
       },
-    });
+    );
 
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
       userId: performedBy,
@@ -268,13 +306,20 @@ export class ProjectService {
     return updatedProject;
   }
 
-  async removeMember(projectId: string, userId: string, performedBy: string): Promise<Project> {
+  async removeMember(
+    projectId: string,
+    userId: string,
+    performedBy: string,
+  ): Promise<Project> {
     const project = await this.findById(projectId);
-    const updatedProject = await this.projectRepository.updateProject(projectId, {
-      members: {
-        disconnect: { id: userId },
+    const updatedProject = await this.projectRepository.updateProject(
+      projectId,
+      {
+        members: {
+          disconnect: { id: userId },
+        },
       },
-    });
+    );
 
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
       userId: performedBy,
@@ -294,13 +339,20 @@ export class ProjectService {
     return updatedProject;
   }
 
-  async addManager(projectId: string, userId: string, performedBy: string): Promise<Project> {
+  async addManager(
+    projectId: string,
+    userId: string,
+    performedBy: string,
+  ): Promise<Project> {
     const project = await this.findById(projectId);
-    const updatedProject = await this.projectRepository.updateProject(projectId, {
-      managers: {
-        connect: { id: userId },
+    const updatedProject = await this.projectRepository.updateProject(
+      projectId,
+      {
+        managers: {
+          connect: { id: userId },
+        },
       },
-    });
+    );
 
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
       userId: performedBy,
@@ -320,13 +372,20 @@ export class ProjectService {
     return updatedProject;
   }
 
-  async removeManager(projectId: string, userId: string, performedBy: string): Promise<Project> {
+  async removeManager(
+    projectId: string,
+    userId: string,
+    performedBy: string,
+  ): Promise<Project> {
     const project = await this.findById(projectId);
-    const updatedProject = await this.projectRepository.updateProject(projectId, {
-      managers: {
-        disconnect: { id: userId },
+    const updatedProject = await this.projectRepository.updateProject(
+      projectId,
+      {
+        managers: {
+          disconnect: { id: userId },
+        },
       },
-    });
+    );
 
     this.eventEmitter.emit(ActivityLogEvent.ACTIVITY_LOG, {
       userId: performedBy,
@@ -346,7 +405,6 @@ export class ProjectService {
     return updatedProject;
   }
 
-
   async getMyProjects(
     user: User,
     projectsDTO: ListProjectsDTO,
@@ -362,7 +420,7 @@ export class ProjectService {
             { managersIDs: { has: user.id } },
           ],
         },
-      ]
+      ],
     };
 
     const include: Prisma.ProjectInclude = {
@@ -421,10 +479,13 @@ export class ProjectService {
 
     const countsMap = new Map(counts.map((c) => [c.projectId, c._count.id]));
 
-    result.data = result.data.map((p) => ({
-      ...p,
-      documentCount: countsMap.get(p.id) || 0,
-    } as any));
+    result.data = result.data.map(
+      (p) =>
+        ({
+          ...p,
+          documentCount: countsMap.get(p.id) || 0,
+        } as any),
+    );
 
     return result;
   }
@@ -460,7 +521,9 @@ export class ProjectService {
       if (filters.createdAfter || filters.createdBefore) {
         where.createdAt = {
           ...(filters.createdAfter && { gte: new Date(filters.createdAfter) }),
-          ...(filters.createdBefore && { lte: new Date(filters.createdBefore) }),
+          ...(filters.createdBefore && {
+            lte: new Date(filters.createdBefore),
+          }),
         };
       }
       if (filters.tags) {

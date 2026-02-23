@@ -20,22 +20,28 @@ import { CaslModule } from '@modules/casl';
 import { permissions } from './analytics.permissions';
 
 @Module({
-    imports: [PrismaModule, UserModule, forwardRef(() => AuthModule), ActivityLogsModule, CaslModule.forFeature({ permissions })],
-    controllers: [AnalyticsController],
-    providers: [
-        AnalyticsListener,
-        AnalyticsService,
-        DashboardService,
-        DocumentAnalyticsService,
-        UserAnalyticsService,
-        ProjectAnalyticsService,
-        SecurityAnalyticsService,
-        ApprovalAnalyticsService,
-        DailyUploadStatRepository,
-        UserActivityRepository,
-        ProjectDocumentStatRepository,
-        SecurityEventRepository,
-    ],
-    exports: [AnalyticsService, DashboardService],
+  imports: [
+    PrismaModule,
+    UserModule,
+    forwardRef(() => AuthModule),
+    ActivityLogsModule,
+    CaslModule.forFeature({ permissions }),
+  ],
+  controllers: [AnalyticsController],
+  providers: [
+    AnalyticsListener,
+    AnalyticsService,
+    DashboardService,
+    DocumentAnalyticsService,
+    UserAnalyticsService,
+    ProjectAnalyticsService,
+    SecurityAnalyticsService,
+    ApprovalAnalyticsService,
+    DailyUploadStatRepository,
+    UserActivityRepository,
+    ProjectDocumentStatRepository,
+    SecurityEventRepository,
+  ],
+  exports: [AnalyticsService, DashboardService],
 })
-export class AnalyticsModule { }
+export class AnalyticsModule {}

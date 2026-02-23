@@ -10,9 +10,21 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ApprovalStatus, DocumentVisibility } from '@prisma/client';
+import {
+  ApprovalStatus,
+  DocumentVisibility,
+  ProjectCategory,
+} from '@prisma/client';
 
 export class DocumentFiltersDTO {
+  @IsOptional()
+  @IsEnum(ProjectCategory)
+  @ApiPropertyOptional({
+    description: 'Filter files by project category',
+    enum: ProjectCategory,
+  })
+  projectCategory?: ProjectCategory;
+
   @IsOptional()
   @IsString()
   @ApiPropertyOptional({
