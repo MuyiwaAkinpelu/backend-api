@@ -44,6 +44,8 @@ import { ChangePasswordDto } from '../dto/change-password.dto';
 import { SkipThrottle } from '@nestjs/throttler';
 import { GoogleLoginDto } from '../dto/google-login.dto';
 
+import { ResendOTPDto } from '../dto/resend-otp.dto';
+
 @ApiTags('Auth')
 @SkipThrottle()
 @ApiBaseResponses()
@@ -53,7 +55,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly tokenService: TokenService,
     private readonly passwordResetService: PasswordResetService,
-  ) {}
+  ) { }
 
   @SkipThrottle()
   @Version('1')
@@ -138,7 +140,24 @@ export class AuthController {
     }
 
     // Proceed with regular authentication
-    return this.authService.sign(user, deviceIp);
+    return this.authService.sign(user, deviceIp, req.headers['user-agent']);
+  }
+
+  @Version('1')
+  @ApiBody({ type: ResendOTPDto })
+  @SkipAuth()
+  @ApiOperation({ summary: 'Resend sign-in OTP' })
+  @Post('resend-otp')
+  async resendOTP(
+    @Body() resendOtpDto: ResendOTPDto,
+    @Request() req: any,
+    @Ip() deviceIp: string,
+  ) {
+    return this.authService.resendOTP(
+      resendOtpDto.email,
+      deviceIp,
+      req.headers['user-agent'],
+    );
   }
 
   @Version('1')

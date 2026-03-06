@@ -12,6 +12,7 @@ import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ApprovalStatus,
+  BodyOfWork,
   DocumentVisibility,
   ProjectCategory,
 } from '@prisma/client';
@@ -176,4 +177,9 @@ export class DocumentFiltersDTO {
     required: false,
   })
   search?: string;
+
+  @ApiPropertyOptional({ enum: BodyOfWork })
+  @IsOptional()
+  @IsEnum(BodyOfWork)
+  bodyOfWork?: BodyOfWork;
 }

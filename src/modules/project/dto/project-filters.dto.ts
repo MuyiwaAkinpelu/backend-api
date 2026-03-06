@@ -7,7 +7,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ProjectCategory, Status } from '@prisma/client';
+import { BodyOfWork, ProjectCategory, Status } from '@prisma/client';
 import { Transform } from 'class-transformer';
 
 export class ProjectFiltersDTO {
@@ -91,4 +91,41 @@ export class ProjectFiltersDTO {
     required: false,
   })
   search?: string;
+
+  @ApiPropertyOptional({ enum: BodyOfWork })
+  @IsOptional()
+  @IsEnum(BodyOfWork)
+  bodyOfWork?: BodyOfWork;
+
+  @IsOptional()
+  @IsDateString()
+  @ApiPropertyOptional({
+    description: 'Filter projects established after this date',
+    required: false,
+  })
+  establishedAfter?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @ApiPropertyOptional({
+    description: 'Filter projects established before this date',
+    required: false,
+  })
+  establishedBefore?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @ApiPropertyOptional({
+    description: 'Filter projects closed after this date',
+    required: false,
+  })
+  closedAfter?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @ApiPropertyOptional({
+    description: 'Filter projects closed before this date',
+    required: false,
+  })
+  closedBefore?: string;
 }

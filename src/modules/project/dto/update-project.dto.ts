@@ -1,12 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ProjectCategory, Status } from '@prisma/client';
 import {
   IsArray,
   IsEnum,
   IsOptional,
   IsString,
   ArrayNotEmpty,
+  IsDateString,
 } from 'class-validator';
+import { BodyOfWork, ProjectCategory, Status } from '@prisma/client';
 
 export class UpdateProjectDTO {
   @ApiPropertyOptional({
@@ -72,4 +73,28 @@ export class UpdateProjectDTO {
   @IsOptional()
   @IsEnum(Status)
   status?: Status;
+
+  @ApiPropertyOptional({
+    description: 'The body of work the project belongs to',
+    enum: BodyOfWork,
+  })
+  @IsOptional()
+  @IsEnum(BodyOfWork)
+  bodyOfWork?: BodyOfWork;
+
+  @ApiPropertyOptional({
+    description: 'The date the project was established/created',
+    example: '2023-01-01T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  establishedDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'The date the project was closed',
+    example: '2023-12-31T23:59:59.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  closedDate?: string;
 }

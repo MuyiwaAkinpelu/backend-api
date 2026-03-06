@@ -14,6 +14,7 @@ import { DocumentFiltersDTO } from './document-filter.dto';
 export enum FileSortableColumns {
   UPLOAD_DATE = 'uploadDate',
   FILENAME = 'filename',
+  ORIGINAL_FILENAME = 'originalFilename',
   SIZE = 'size',
   FILE_TYPE = 'fileType',
   VIEWS = 'views',

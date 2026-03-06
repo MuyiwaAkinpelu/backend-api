@@ -9,7 +9,7 @@ import {
   AWS_S3_REGION,
   AWS_S3_ENDPOINT,
 } from '@constants/env.constants';
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@providers/prisma';
 import { SaveFileToDBParams } from './types';
@@ -28,6 +28,7 @@ import {
 import { SearchService } from '@modules/search/search.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ActivityLogEvent } from '@modules/activity-logs/constants';
+import { FileNamingDTO } from './dto/file-naming.dto';
 
 @Injectable()
 export class UploadService {
@@ -48,7 +49,7 @@ export class UploadService {
     });
     this.bucketUrl =
       this.configService.get(AWS_S3_ENDPOINT) ||
-      this.configService.get(AWS_S3_BUCKET)
+        this.configService.get(AWS_S3_BUCKET)
         ? `https://${this.configService.get(AWS_S3_BUCKET)}.s3.amazonaws.com`
         : 'https://scidar-drs-uploads.s3.amazonaws.com';
   }
@@ -59,14 +60,32 @@ export class UploadService {
     uploaderId: string,
     userRoles: Roles[],
     projectId?: string,
+    namingDetails?: FileNamingDTO[],
   ) {
     try {
       const uploadedFiles = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const naming = namingDetails?.[i];
 
-      for (const file of files) {
-        // Create a unique name for the file
-        const uniqueSuffix = `${uuidv4()}-${Date.now()}`;
+        let originalFilename = file.originalname;
         const extension = path.extname(file.originalname);
+
+        if (naming) {
+          originalFilename = `${naming.tag}_${naming.date}_${naming.name}_${naming.version}${extension}`;
+        }
+        const existingFile = await this.prisma.file.findFirst({
+          where: { originalFilename },
+        });
+
+        if (existingFile) {
+          throw new ConflictException(
+            `A file with the name "${originalFilename}" already exists. Please use a different name or version.`,
+          );
+        }
+
+        // Create a unique name for the file (S3 Key)
+        const uniqueSuffix = `${uuidv4()}-${Date.now()}`;
         const customFileName = `${uniqueSuffix}${extension}`;
 
         const parallelUploads3 = new Upload({
@@ -100,7 +119,7 @@ export class UploadService {
         // Save file details to the database
         const savedFile = await this.saveFileToDatabase({
           fileName: customFileName,
-          originalFilename: file.originalname,
+          originalFilename,
           fileUrl,
           contentType: file.mimetype,
           fileType: extension.replace('.', ''),
@@ -155,27 +174,27 @@ export class UploadService {
               role === Roles.SYSTEM_ADMIN || role === Roles.MANAGEMENT_STAFF,
           ) &&
             projectId && {
-              approvalRequests: {
-                create: {
-                  approvedBy: {
-                    connect: {
-                      id: uploaderId,
-                    },
+            approvalRequests: {
+              create: {
+                approvedBy: {
+                  connect: {
+                    id: uploaderId,
                   },
-                  project: {
-                    connect: {
-                      id: projectId,
-                    },
-                  },
-                  status: ApprovalStatus.APPROVED,
                 },
+                project: {
+                  connect: {
+                    id: projectId,
+                  },
+                },
+                status: ApprovalStatus.APPROVED,
               },
-              // projects: {
-              //   connect: {
-              //     id: projectId,
-              //   },
-              // },
-            }),
+            },
+            // projects: {
+            //   connect: {
+            //     id: projectId,
+            //   },
+            // },
+          }),
           ...(projectId && {
             projects: {
               connect: {

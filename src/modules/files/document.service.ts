@@ -529,6 +529,30 @@ export class DocumentService {
       if (targetProjectIDs) {
         where.projectsIDs = { hasSome: targetProjectIDs };
       }
+
+      if (filters.bodyOfWork !== undefined) {
+        const projects = await this.prisma.project.findMany({
+          where: { bodyOfWork: filters.bodyOfWork },
+          select: { id: true },
+        });
+        const projectIdsFromBOW = projects.map((p) => p.id);
+
+        if (where.projectsIDs) {
+          // If already filtering by project IDs (from category or direct filter), intersect them
+          const existingHasSome = (where.projectsIDs as any).hasSome || [];
+          if (existingHasSome.length > 0) {
+            where.projectsIDs = {
+              hasSome: existingHasSome.filter((id) =>
+                projectIdsFromBOW.includes(id),
+              ),
+            };
+          } else {
+            where.projectsIDs = { hasSome: projectIdsFromBOW };
+          }
+        } else {
+          where.projectsIDs = { hasSome: projectIdsFromBOW };
+        }
+      }
       if (filters.sizeMin !== undefined || filters.sizeMax !== undefined) {
         where.size = {};
         if (filters.sizeMin !== undefined) {

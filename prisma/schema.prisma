@@ -242,9 +242,23 @@ model Project {
   documentsIDs String[] @db.ObjectId
   documents    File[]   @relation(fields: [documentsIDs], references: [id], name: "ProjectDocuments")
 
+  bodyOfWork      BodyOfWork?
+  establishedDate DateTime?    @default(now())
+  closedDate      DateTime?
+
   approvalRequests     ApprovalRequest[]
   projectDocumentStats ProjectDocumentStat[]
   @@index([category])
+  @@index([bodyOfWork])
+  @@index([establishedDate])
+}
+
+enum BodyOfWork {
+  PRIMARY_HEALTH_CARE
+  COMMUNITY_HEALTH_AND_NUTRITION
+  HEALTH_SECURITY
+  HEALTH_SYSTEMS_STRENGTHENING
+  GENDER_EQUALITY_AND_BEHAVIOUR_CHANGE
 }
 
 enum Status {

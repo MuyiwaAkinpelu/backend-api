@@ -1,12 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ProjectCategory, Status } from '@prisma/client';
 import {
   IsArray,
   IsEnum,
   IsOptional,
   IsString,
   ArrayNotEmpty,
+  IsDateString,
 } from 'class-validator';
+import { BodyOfWork, ProjectCategory, Status } from '@prisma/client';
 
 export class CreateProjectDTO {
   @ApiProperty({
@@ -73,4 +74,20 @@ export class CreateProjectDTO {
   @IsOptional()
   @IsEnum(Status)
   status?: Status;
+
+  @ApiProperty({
+    description: 'The body of work the project belongs to',
+    enum: BodyOfWork,
+    example: BodyOfWork.PRIMARY_HEALTH_CARE,
+  })
+  @IsOptional()
+  @IsEnum(BodyOfWork)
+  bodyOfWork?: BodyOfWork;
+
+  @ApiProperty({
+    description: 'The date the project was established/created',
+    example: '2023-01-01T00:00:00.000Z',
+  })
+  @IsDateString()
+  establishedDate: string;
 }

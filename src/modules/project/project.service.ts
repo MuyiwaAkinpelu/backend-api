@@ -31,7 +31,7 @@ export class ProjectService {
     private readonly projectRepository: ProjectRepository,
     private readonly eventEmitter: EventEmitter2,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   async findById(id: string): Promise<
     Omit<Project, 'documentsIDs' | 'managersIDs' | 'membersIDs'> & {
@@ -140,10 +140,10 @@ export class ProjectService {
 
     result.data = result.data.map(
       (p) =>
-        ({
-          ...p,
-          documentCount: countsMap.get(p.id) || 0,
-        } as any),
+      ({
+        ...p,
+        documentCount: countsMap.get(p.id) || 0,
+      } as any),
     );
 
     return result;
@@ -481,10 +481,10 @@ export class ProjectService {
 
     result.data = result.data.map(
       (p) =>
-        ({
-          ...p,
-          documentCount: countsMap.get(p.id) || 0,
-        } as any),
+      ({
+        ...p,
+        documentCount: countsMap.get(p.id) || 0,
+      } as any),
     );
 
     return result;
@@ -544,6 +544,28 @@ export class ProjectService {
           { name: { contains: filters.search, mode: 'insensitive' } },
           { description: { contains: filters.search, mode: 'insensitive' } },
         ];
+      }
+
+      if (filters.bodyOfWork) {
+        where.bodyOfWork = filters.bodyOfWork;
+      }
+
+      if (filters.establishedAfter || filters.establishedBefore) {
+        where.establishedDate = {
+          ...(filters.establishedAfter && {
+            gte: new Date(filters.establishedAfter),
+          }),
+          ...(filters.establishedBefore && {
+            lte: new Date(filters.establishedBefore),
+          }),
+        };
+      }
+
+      if (filters.closedAfter || filters.closedBefore) {
+        where.closedDate = {
+          ...(filters.closedAfter && { gte: new Date(filters.closedAfter) }),
+          ...(filters.closedBefore && { lte: new Date(filters.closedBefore) }),
+        };
       }
     }
 

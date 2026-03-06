@@ -13,7 +13,6 @@ import { UserRepository } from '@modules/user/user.repository';
 import {
   ACCOUNT_NOT_ACTIVE,
   INVALID_CREDENTIALS,
-  MFA_PHONE_OR_TOKEN_REQUIRED,
   USER_CONFLICT,
 } from '@constants/errors.constants';
 import {
@@ -211,49 +210,73 @@ export class AuthService {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
-    // Check if device exists in Redis
-    const isNewDevice = await this.isDeviceIPNew(testUser.id, deviceIp);
+    // Force 2FA for email/password login
+    // Generate OTP
+    const otp = await this.tokenService.create(
+      testUser.id,
+      TokenUseCase.LOGIN,
+    );
 
-    // temporarily turn off 2fa
-    // TODO: fix frontend otp
-    if (false) {
-      // Generate OTP
-      const otp = await this.tokenService.create(
-        testUser.id,
-        TokenUseCase.LOGIN,
-      );
-
-      // Send OTP via email
-      await this.mailService.sendOTPConfirmation(testUser.email, {
-        otp: otp.code,
-      });
-      Logger.debug(otp.code, 'OTP');
-      // 400004: Phone number or token is required
-      throw new BadRequestException(MFA_PHONE_OR_TOKEN_REQUIRED);
-    }
-
-    // update lastLogin date
-    await this.userRepository.updateUser(testUser.id, {
-      lastLogin: new Date(),
+    // Send OTP via email
+    await this.mailService.sendOTPConfirmation(testUser.email, {
+      otp: otp.code,
     });
+    Logger.debug(otp.code, 'OTP');
 
+    // Emit PENDING_MFA activity log
     this.eventEmitter.emitAsync(ActivityLogEvent.ACTIVITY_LOG, {
       userId: testUser.id,
       verb: ActivityVerb.LOGIN,
       entity: ActivityEntity.AUTH,
       outcome: ActivityOutcome.SUCCESS,
-      securityEvent: null,
       metadata: {
-        outcome: 'SUCCESS',
-        reason: 'SUCCESS',
-        // securityEvent: SecurityEventType.SUCCESSFUL_LOGIN,
+        outcome: 'PENDING_MFA',
+        reason: 'OTP_SENT',
       },
       ip: deviceIp,
       userAgent,
       occurredAt: new Date(),
     });
 
-    return this.sign(testUser, deviceIp);
+    throw new BadRequestException('OTP sent to your email. Please verify to continue.');
+  }
+
+  async resendOTP(email: string, deviceIp: string, userAgent?: string) {
+    const user = await this.getUserByEmail(email);
+
+    if (!user) {
+      throw new BadRequestException('Invalid request');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException(ACCOUNT_NOT_ACTIVE);
+    }
+
+    // Generate NEW OTP
+    const otp = await this.tokenService.create(user.id, TokenUseCase.LOGIN);
+
+    // Send OTP via email
+    await this.mailService.sendOTPConfirmation(user.email, {
+      otp: otp.code,
+    });
+    Logger.debug(otp.code, 'Resend OTP');
+
+    // Log PENDING_MFA
+    this.eventEmitter.emitAsync(ActivityLogEvent.ACTIVITY_LOG, {
+      userId: user.id,
+      verb: ActivityVerb.LOGIN,
+      entity: ActivityEntity.AUTH,
+      outcome: ActivityOutcome.SUCCESS,
+      metadata: {
+        outcome: 'PENDING_MFA',
+        reason: 'OTP_RESENT',
+      },
+      ip: deviceIp,
+      userAgent,
+      occurredAt: new Date(),
+    });
+
+    return { message: 'OTP resent to your email.' };
   }
 
   async googleLogin(
@@ -269,34 +292,23 @@ export class AuthService {
       });
       payload = ticket.getPayload();
     } catch (error) {
+      console.log('error', error);
       throw new UnauthorizedException('Invalid Google token');
     }
 
     const { sub: googleId, email, given_name, family_name, picture } = payload;
 
-    // 1. Try to find user by googleId
     let user = await this.userRepository.findOne({ where: { googleId } });
 
     if (!user) {
-      // 2. Try to find user by email (linking)
       user = await this.userRepository.findOne({ where: { email } });
 
       if (user) {
-        // Link existing user to Google
         user = await this.userRepository.updateUser(user.id, { googleId });
       } else {
-        // 3. Create new user
-        user = await this.userRepository.create({
-          email,
-          googleId,
-          firstName: given_name,
-          lastName: family_name,
-          avatar: picture,
-          isVerified: true,
-          isActive: true, // Auto-activate Google users
-          roles: [Roles.GUEST], // Assign default role
-          password: await bcrypt.hash(Math.random().toString(36).slice(-8), 10), // Random password
-        } as any);
+        throw new UnauthorizedException(
+          'Account not found. Please contact an administrator to create your account.',
+        );
       }
     }
 
@@ -304,11 +316,21 @@ export class AuthService {
       throw new UnauthorizedException(ACCOUNT_NOT_ACTIVE);
     }
 
+    return this.sign(user, deviceIp, userAgent, 'GOOGLE');
+  }
+
+  async sign(
+    user: User,
+    deviceIp: string,
+    userAgent?: string,
+    method = 'PASSWORD',
+  ) {
     // update lastLogin date
     await this.userRepository.updateUser(user.id, {
       lastLogin: new Date(),
     });
 
+    // Log SUCCESS activity
     this.eventEmitter.emitAsync(ActivityLogEvent.ACTIVITY_LOG, {
       userId: user.id,
       verb: ActivityVerb.LOGIN,
@@ -317,17 +339,13 @@ export class AuthService {
       securityEvent: null,
       metadata: {
         outcome: 'SUCCESS',
-        method: 'GOOGLE',
+        method,
       },
       ip: deviceIp,
       userAgent,
       occurredAt: new Date(),
     });
 
-    return this.sign(user, deviceIp);
-  }
-
-  async sign(user: User, deviceIp: string) {
     // Save device to redis
     await this.saveDeviceIP(user.id, deviceIp);
 

@@ -15,7 +15,7 @@ export class NotificationHelperService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
-  ) {}
+  ) { }
 
   async verifyTokenAndGetUser(token: string) {
     try {
@@ -38,6 +38,7 @@ export class NotificationHelperService {
       return {
         id: user.id,
         email: user.email,
+        roles: user.roles,
       };
     } catch (err: any) {
       if (err.name === 'TokenExpiredError') {

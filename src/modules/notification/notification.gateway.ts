@@ -15,6 +15,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { Notification } from '@prisma/client';
 import { NotificationHelperService } from './services/notification-helper.service';
 import { NotificationService } from './services/notification.service';
+import { UserService } from '@modules/user/user.service';
 import {
   NOTIFICATION_EVENT,
   NotificationsListEvent,
@@ -25,6 +26,7 @@ export interface AuthenticatedSocket extends Socket {
   user?: {
     id: string;
     email: string;
+    roles: string[];
   };
 }
 
@@ -37,8 +39,7 @@ export interface AuthenticatedSocket extends Socket {
   },
 })
 export class NotificationGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(NotificationGateway.name);
 
   @WebSocketServer()
@@ -48,7 +49,8 @@ export class NotificationGateway
     private readonly helperService: NotificationHelperService,
     @Inject(forwardRef(() => NotificationService))
     private readonly notificationService: NotificationService,
-  ) {}
+    private readonly userService: UserService,
+  ) { }
 
   afterInit(server: Server) {
     server.use(async (client: AuthenticatedSocket, next) => {
@@ -76,9 +78,25 @@ export class NotificationGateway
       return;
     }
     const userId = client.user.id;
+    const roles = client.user.roles || [];
 
     const userRoom = `user_${userId}`;
     await client.join(userRoom);
+
+    // If admin, join the admins room
+    if (roles.includes('SYSTEM_ADMIN')) {
+      await client.join('admins');
+    }
+
+    // Update online status in database
+    await this.userService.updateUser(userId, { isOnline: true }, userId);
+
+    // Broadcast status change to admins
+    this.server.to('admins').emit('user_status_changed', {
+      userId,
+      isOnline: true,
+      lastSeen: new Date(),
+    });
 
     const unreadCount = await this.notificationService.getUnreadCount(userId);
 
@@ -89,8 +107,52 @@ export class NotificationGateway
 
   async handleDisconnect(client: AuthenticatedSocket) {
     if (client.user) {
-      const userRoom = `user_${client.user.id}`;
+      const userId = client.user.id;
+      const userRoom = `user_${userId}`;
       await client.leave(userRoom);
+
+      if (client.user.roles?.includes('SYSTEM_ADMIN')) {
+        await client.leave('admins');
+      }
+
+      // Update online status in database
+      const lastSeen = new Date();
+      await this.userService.updateUser(
+        userId,
+        { isOnline: false, lastSeen },
+        userId,
+      );
+
+      // Broadcast status change to admins
+      this.server.to('admins').emit('user_status_changed', {
+        userId,
+        isOnline: false,
+        lastSeen,
+      });
+    }
+  }
+
+  @SubscribeMessage('get_online_users')
+  async handleGetOnlineUsers(@ConnectedSocket() client: AuthenticatedSocket) {
+    if (!client.user?.roles?.includes('SYSTEM_ADMIN')) {
+      throw new WsException('Unauthorized: Only admins can access online users');
+    }
+
+    try {
+      const users = await this.userService.findAllMembers(true);
+      const onlineUsers = users
+        .filter((u) => u.isOnline)
+        .map((u) => ({
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          email: u.email,
+          avatar: u.avatar,
+          lastSeen: u.lastSeen,
+        }));
+      return onlineUsers;
+    } catch (error) {
+      throw new WsException(`Failed to fetch online users: ${error.message}`);
     }
   }
 

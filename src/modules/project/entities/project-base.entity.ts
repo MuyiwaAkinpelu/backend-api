@@ -1,7 +1,7 @@
 import { Exclude, Expose, Type } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import ProjectEntity from './project.entity';
-import { ProjectCategory, Status } from '@prisma/client';
+import { BodyOfWork, ProjectCategory, Status } from '@prisma/client';
 import UserBaseEntity from '@modules/user/entities/user-base.entity';
 
 @Exclude()
@@ -47,6 +47,18 @@ export default class ProjectBaseEntity extends PartialType(ProjectEntity) {
   @ApiProperty({ type: Array, nullable: true })
   @Expose()
   readonly projectMembers: string[] | null;
+
+  @ApiProperty({ enum: BodyOfWork, nullable: true })
+  @Expose()
+  readonly bodyOfWork: BodyOfWork | null;
+
+  @ApiProperty({ type: Date, nullable: true })
+  @Expose()
+  readonly establishedDate: Date | null;
+
+  @ApiProperty({ type: Date, nullable: true })
+  @Expose()
+  readonly closedDate: Date | null;
 
   @ApiProperty({ type: Date, nullable: true })
   @Expose()

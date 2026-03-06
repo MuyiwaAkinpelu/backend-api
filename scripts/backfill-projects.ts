@@ -1,21 +1,29 @@
-import { PrismaClient, Status } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 async function main() {
     const prisma = new PrismaClient();
+
     try {
-        console.log('--- Database Migration: Backfilling Project Status ---');
+        console.log('Starting backfill for projects...');
 
-        // 1. Update all projects result
-        const result = await prisma.project.updateMany({
-            data: {
-                status: Status.ACTIVE
-            },
-        });
+        const projects = await prisma.project.findMany();
 
-        console.log(`Successfully backfilled ${result.count} projects to ACTIVE status.`);
+        for (const project of projects) {
+            console.log(`Backfilling project: ${project.name}`);
 
+            await prisma.project.update({
+                where: { id: project.id },
+                data: {
+                    // Setting establishedDate to createdAt as requested
+                    establishedDate: project.createdAt,
+                    // Leaving bodyOfWork as null so they can edit it manually as requested (implied by "so they can edit and update it")
+                },
+            });
+        }
+
+        console.log('Backfill completed successfully.');
     } catch (error) {
-        console.error('Backfill failed:', error);
+        console.error('Error during backfill:', error);
     } finally {
         await prisma.$disconnect();
     }

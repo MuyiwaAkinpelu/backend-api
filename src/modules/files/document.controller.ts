@@ -68,7 +68,7 @@ export class DocumentController {
     private readonly documentService: DocumentService,
     private readonly uploadService: UploadService,
     private readonly eventEmitter: EventEmitter2,
-  ) {}
+  ) { }
 
   @ApiOperation({ summary: 'Search within publicly available documents' })
   @ApiResponse({ status: 200, description: 'Search successful' })
@@ -104,6 +104,19 @@ export class DocumentController {
           default: [],
           nullable: true,
         },
+        namingDetails: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              tag: { type: 'string' },
+              date: { type: 'string', example: '20230925' },
+              name: { type: 'string' },
+              version: { type: 'string' },
+            },
+          },
+          description: 'Naming parts for each file',
+        },
         files: {
           type: 'array',
           items: {
@@ -138,7 +151,8 @@ export class DocumentController {
       }),
     )
     files: Express.Multer.File[],
-    @Body('tags', new DefaultValuePipe([]), ParseArrayPipe) tags: string[],
+    @Body('tags', new DefaultValuePipe([])) tags: string | string[],
+    @Body('namingDetails', new DefaultValuePipe('[]')) namingDetails: string | any[],
     @Optional()
     @Body(
       'projectId',
@@ -151,6 +165,27 @@ export class DocumentController {
   ) {
     const tokenUser = await userProxy.get();
 
+    let parsedTags = tags;
+    if (typeof tags === 'string') {
+      try {
+        parsedTags = JSON.parse(tags);
+      } catch (e) {
+        // Fallback to comma separated if not JSON
+        parsedTags = tags.split(',').map((t) => t.trim());
+      }
+    }
+
+    let parsedNamingDetails = namingDetails;
+    if (typeof namingDetails === 'string') {
+      try {
+        parsedNamingDetails = JSON.parse(namingDetails);
+      } catch (e) {
+        throw new BadRequestException(
+          'Invalid namingDetails format. Expected a JSON array string.',
+        );
+      }
+    }
+
     // console.log(files);
     console.log(projectId);
     if (!projectId) {
@@ -158,10 +193,11 @@ export class DocumentController {
     }
     await this.uploadService.upload(
       files,
-      tags,
+      Array.isArray(parsedTags) ? parsedTags : [],
       tokenUser.id,
       tokenUser.roles,
       projectId,
+      Array.isArray(parsedNamingDetails) ? parsedNamingDetails : [],
     );
   }
 

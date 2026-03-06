@@ -28,6 +28,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ActivityLogsModule } from '@modules/activity-logs/activity-logs.module';
 import { NotificationModule } from '@modules/notification/notification.module';
+import { CommonModule } from '../../common/common.module';
 
 @Module({
   controllers: [],
@@ -77,6 +78,7 @@ import { NotificationModule } from '@modules/notification/notification.module';
     AnalyticsModule,
     ActivityLogsModule,
     NotificationModule,
+    CommonModule,
   ],
   providers: [
     AuthTokenService,
@@ -89,4 +91,4 @@ import { NotificationModule } from '@modules/notification/notification.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
